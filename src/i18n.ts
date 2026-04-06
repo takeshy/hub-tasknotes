@@ -109,11 +109,16 @@ export interface Translations {
   calendarOpenEvent: string;
   calendarSyncAll: string;
   calendarUnavailable: string;
+  // AI
+  aiCreate: string;
+  aiParsing: string;
+  aiPlaceholder: string;
   // Errors
   errorSave: string;
   errorLoad: string;
   errorDelete: string;
   errorCalendarSync: string;
+  errorAIParse: string;
   // Empty states
   noTasks: string;
   noTasksFiltered: string;
@@ -241,11 +246,16 @@ const en: Translations = {
   calendarOpenEvent: "Open in Google Calendar",
   calendarSyncAll: "Sync All Tasks",
   calendarUnavailable: "Calendar unavailable (requires premium plan)",
+  // AI
+  aiCreate: "Create with AI",
+  aiParsing: "Analyzing...",
+  aiPlaceholder: "Describe your task in natural language...\ne.g. Buy groceries by Friday, high priority, for the shopping project",
   // Errors
   errorSave: "Failed to save task",
   errorLoad: "Failed to load tasks",
   errorDelete: "Failed to delete task",
   errorCalendarSync: "Failed to sync with Google Calendar",
+  errorAIParse: "AI could not parse the input",
   // Empty states
   noTasks: "No tasks yet. Create your first task!",
   noTasksFiltered: "No tasks match the current filters.",
@@ -373,11 +383,16 @@ const ja: Translations = {
   calendarOpenEvent: "Google Calendar で開く",
   calendarSyncAll: "全タスクを同期",
   calendarUnavailable: "カレンダーは利用できません（プレミアムプランが必要）",
+  // AI
+  aiCreate: "AIで作成",
+  aiParsing: "解析中...",
+  aiPlaceholder: "タスクの内容を自然な文章で入力してください...\n例: 金曜日までに買い物、優先度高、ショッピングプロジェクト",
   // Errors
   errorSave: "タスクの保存に失敗しました",
   errorLoad: "タスクの読み込みに失敗しました",
   errorDelete: "タスクの削除に失敗しました",
   errorCalendarSync: "Google Calendar との同期に失敗しました",
+  errorAIParse: "AIが入力を解析できませんでした",
   // Empty states
   noTasks: "タスクがありません。最初のタスクを作成しましょう！",
   noTasksFiltered: "条件に一致するタスクがありません。",

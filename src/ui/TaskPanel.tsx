@@ -11,13 +11,37 @@ import { KanbanView } from "./KanbanView";
 import { CalendarView } from "./CalendarView";
 import { AgendaView } from "./AgendaView";
 import { TaskEditor } from "./TaskEditor";
-import { createTaskFromNaturalLanguage } from "../core/naturalLanguage";
 import { computeFormulas } from "../core/formulas";
 import { startTimer, stopTimer } from "../core/timeTracking";
 import { syncTaskToCalendar, unsyncTaskFromCalendar, fetchCalendarEvents, checkCalendarAvailable, CalendarAPI } from "../core/calendarSync";
 
+const PREMIUM_MODEL = "gemini-3.1-flash-lite-preview";
+const FREE_MODEL = "gemma-4-31b-it";
+
+const AI_SYSTEM_PROMPT = `You are a task parser. Extract task information from the user's input and return a JSON object.
+Fields:
+- title (string, required)
+- status (string: "todo"|"in_progress"|"done"|"cancelled", default "todo")
+- due (string YYYY-MM-DD or null)
+- priority (string: "none"|"low"|"medium"|"high"|"urgent", default "none")
+- contexts (string array, e.g. ["errands","home"])
+- projects (string array, e.g. ["shopping"])
+- timeEstimate (number in minutes or null)
+- body (string, additional notes extracted from the input, default "")
+
+Today's date is {{TODAY}}.
+Return ONLY valid JSON. No markdown fences, no explanation.`;
+
+interface GeminiAPI {
+  chat(
+    messages: Array<{ role: string; content: string }>,
+    options?: { model?: string; systemPrompt?: string }
+  ): Promise<string>;
+}
+
 interface TaskPanelProps {
   api: {
+    gemini: GeminiAPI;
     storage: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> };
     drive: {
       createFile(name: string, content: string): Promise<{ id: string; name: string }>;
@@ -37,11 +61,14 @@ interface TaskPanelProps {
 export function TaskPanel({ api, locale }: TaskPanelProps) {
   const i = t(locale);
   const store = useStore();
-  const [quickInput, setQuickInput] = React.useState("");
   const [editorTask, setEditorTask] = React.useState<Task | null | "new">(null);
   const [calendarLayout, setCalendarLayout] = React.useState<CalendarLayout>(store.settings.calendarLayout);
   const [expanded, setExpanded] = React.useState(false);
+  const [aiModalOpen, setAiModalOpen] = React.useState(false);
+  const [aiInput, setAiInput] = React.useState("");
+  const [aiLoading, setAiLoading] = React.useState(false);
   const serviceRef = React.useRef<import("../core/taskService").TaskService | null>(null);
+  const aiModelRef = React.useRef<string | null>(null);
 
   // Track which task file is open in the main editor
   React.useEffect(() => {
@@ -81,23 +108,83 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     return serviceRef.current.query(store.tasks, store.filter, store.sort);
   }, [store.tasks, store.filter, store.sort]);
 
-  const handleQuickCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickInput.trim() || !serviceRef.current) return;
-    const task = createTaskFromNaturalLanguage(quickInput);
-    try {
-      const created = await serviceRef.current.create(task);
-      setState({ tasks: [...store.tasks, created] });
-      setQuickInput("");
-    } catch (e: any) {
-      setState({ error: e.message || i.errorSave });
+  const callAI = async (input: string): Promise<string> => {
+    const today = new Date().toISOString().slice(0, 10);
+    const systemPrompt = AI_SYSTEM_PROMPT.replace("{{TODAY}}", today);
+    const messages = [{ role: "user", content: input }];
+
+    // Try cached model first
+    if (aiModelRef.current) {
+      return api.gemini.chat(messages, { model: aiModelRef.current, systemPrompt });
     }
+    // Try premium model, fall back to free
+    try {
+      const result = await api.gemini.chat(messages, { model: PREMIUM_MODEL, systemPrompt });
+      aiModelRef.current = PREMIUM_MODEL;
+      return result;
+    } catch {
+      const result = await api.gemini.chat(messages, { model: FREE_MODEL, systemPrompt });
+      aiModelRef.current = FREE_MODEL;
+      return result;
+    }
+  };
+
+  const handleAICreate = async () => {
+    if (!aiInput.trim()) return;
+    setAiLoading(true);
+    try {
+      const raw = await callAI(aiInput);
+      // Strip markdown fences if present
+      const jsonStr = raw.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "").trim();
+      const parsed = JSON.parse(jsonStr);
+      const now = new Date().toISOString();
+      const task: Task = {
+        id: "",
+        title: parsed.title || aiInput,
+        status: parsed.status || "todo",
+        due: parsed.due || null,
+        priority: parsed.priority || "none",
+        contexts: Array.isArray(parsed.contexts) ? parsed.contexts : [],
+        projects: Array.isArray(parsed.projects) ? parsed.projects : [],
+        timeEstimate: typeof parsed.timeEstimate === "number" ? parsed.timeEstimate : null,
+        timeEntries: [],
+        recurrence: null,
+        completeInstances: [],
+        dependencies: [],
+        body: parsed.body || "",
+        created: now,
+        modified: now,
+      };
+      setAiModalOpen(false);
+      setAiInput("");
+      setEditorTask(task);
+    } catch (e: any) {
+      setState({ error: e.message || i.errorAIParse });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleOpenNote = async (task: Task, fileId: string) => {
+    if (!serviceRef.current) return;
+    try {
+      const updated = await serviceRef.current.update(task);
+      setState({ tasks: store.tasks.map((t) => (t.id === updated.id ? updated : t)) });
+    } catch {
+      // save failed, still open the note
+    }
+    setEditorTask(null);
+    const url = new URL(window.location.href);
+    url.searchParams.set("file", fileId);
+    window.history.pushState({}, "", url.toString());
+    window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
   const handleSaveTask = async (task: Task) => {
     if (!serviceRef.current) return;
+    const isNew = editorTask === "new" || (typeof editorTask === "object" && editorTask !== null && !editorTask.id);
     try {
-      if (editorTask === "new") {
+      if (isNew) {
         const id = `task-${Date.now().toString(36)}`;
         const created = await serviceRef.current.create({ ...task, id });
         setState({ tasks: [...store.tasks, created] });
@@ -242,17 +329,48 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
         </div>
       </div>
 
-      {/* Quick create */}
-      <form className="tn-quick-create" onSubmit={handleQuickCreate}>
-        <input
-          type="text"
-          value={quickInput}
-          onChange={(e) => setQuickInput(e.target.value)}
-          placeholder={i.newTaskPlaceholder}
-          className="tn-quick-input"
-        />
-        <button type="submit" className="tn-btn-primary">{i.createTask}</button>
-      </form>
+      {/* Create buttons */}
+      <div className="tn-create-buttons">
+        <button className="tn-btn-primary tn-ai-btn" onClick={() => setAiModalOpen(true)}>
+          &#x2728; {i.aiCreate}
+        </button>
+        <button className="tn-btn" onClick={() => setEditorTask("new")}>
+          &#x270F; {i.newTask}
+        </button>
+      </div>
+
+      {/* AI input modal */}
+      {aiModalOpen && (
+        <div className="tn-editor-overlay" onClick={() => { if (!aiLoading) { setAiModalOpen(false); setAiInput(""); } }}>
+          <div className="tn-ai-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>&#x2728; {i.aiCreate}</h3>
+            <textarea
+              className="tn-ai-textarea"
+              rows={4}
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              placeholder={i.aiPlaceholder}
+              disabled={aiLoading}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAICreate();
+              }}
+            />
+            <div className="tn-ai-modal-actions">
+              <button
+                className="tn-btn-primary"
+                onClick={handleAICreate}
+                disabled={aiLoading || !aiInput.trim()}
+              >
+                {aiLoading ? i.aiParsing : i.aiCreate}
+              </button>
+              <button className="tn-btn" onClick={() => { setAiModalOpen(false); setAiInput(""); }} disabled={aiLoading}>
+                {i.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* View tabs */}
       <div className="tn-view-tabs">
@@ -289,7 +407,6 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
             &#x1F4C5;
           </button>
         )}
-        <button className="tn-btn-primary" onClick={() => setEditorTask("new")}>+ {i.newTask}</button>
       </div>
 
       {/* Error display */}
@@ -353,12 +470,13 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
       {/* Editor modal */}
       {editorTask !== null && (
         <TaskEditor
-          key={editorTask === "new" ? "new" : `${editorTask.id}-${editorTask.calendarEventId || ""}`}
-          task={editorTask === "new" ? null : editorTask}
-          fileId={editorTask !== "new" && editorTask ? serviceRef.current?.getFileId(editorTask.id) : null}
+          key={editorTask === "new" ? "new" : editorTask.id ? `${editorTask.id}-${editorTask.calendarEventId || ""}` : `ai-${editorTask.title}`}
+          task={editorTask === "new" ? null : editorTask.id ? editorTask : editorTask}
+          fileId={editorTask !== "new" && editorTask.id ? serviceRef.current?.getFileId(editorTask.id) : null}
           onSave={handleSaveTask}
           onCancel={() => setEditorTask(null)}
           onDelete={handleDelete}
+          onOpenNote={handleOpenNote}
           locale={locale}
           calendarAvailable={store.calendarAvailable && store.settings.calendarSync}
           onSyncCalendar={handleSyncTask}

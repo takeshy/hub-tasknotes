@@ -13,15 +13,16 @@ interface TaskEditorProps {
   onSave: (task: Task) => void;
   onCancel: () => void;
   onDelete?: (taskId: string) => void;
+  onOpenNote?: (task: Task, fileId: string) => void;
   locale?: string;
   calendarAvailable?: boolean;
   onSyncCalendar?: (taskId: string) => void;
   onUnsyncCalendar?: (taskId: string) => void;
 }
 
-export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, locale, calendarAvailable, onSyncCalendar, onUnsyncCalendar }: TaskEditorProps) {
+export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNote, locale, calendarAvailable, onSyncCalendar, onUnsyncCalendar }: TaskEditorProps) {
   const i = t(locale);
-  const isNew = !task;
+  const isNew = !task || !task.id;
   const [form, setForm] = React.useState<Task>(
     task ?? {
       id: "",
@@ -91,17 +92,15 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, locale, c
       <form className="tn-editor" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <div className="tn-editor-header">
           <h3>{isNew ? i.newTask : i.editTask}</h3>
-          {!isNew && fileId && (
+          {!isNew && fileId && onOpenNote && (
             <button
               type="button"
               className="tn-open-note-btn"
               title={i.openNote}
               onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("file", fileId);
-                window.history.pushState({}, "", url.toString());
-                window.dispatchEvent(new PopStateEvent("popstate"));
-                onCancel();
+                const contexts = contextsInput.split(",").map((s) => s.trim()).filter(Boolean);
+                const projects = projectsInput.split(",").map((s) => s.trim()).filter(Boolean);
+                onOpenNote({ ...form, contexts, projects, modified: new Date().toISOString() }, fileId!);
               }}
             >
               &#x2197;

@@ -21,6 +21,12 @@ interface PluginAPI {
   registerSettingsTab(tab: {
     component: unknown;
   }): void;
+  gemini: {
+    chat(
+      messages: Array<{ role: string; content: string }>,
+      options?: { model?: string; systemPrompt?: string }
+    ): Promise<string>;
+  };
   storage: {
     get(key: string): Promise<unknown>;
     set(key: string, value: unknown): Promise<void>;
