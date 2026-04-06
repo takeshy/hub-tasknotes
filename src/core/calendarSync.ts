@@ -32,6 +32,23 @@ export interface CalendarAPI {
   deleteEvent(eventId: string, calendarId?: string): Promise<void>;
 }
 
+/** Format a Date as "YYYY-MM-DDTHH:MM:SS±HH:MM" in local time */
+export function toLocalISO(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const y = d.getFullYear();
+  const mo = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const h = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  const s = pad(d.getSeconds());
+  const offset = -d.getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const absOffset = Math.abs(offset);
+  const oh = pad(Math.floor(absOffset / 60));
+  const om = pad(absOffset % 60);
+  return `${y}-${mo}-${day}T${h}:${mi}:${s}${sign}${oh}:${om}`;
+}
+
 /** Build a calendar event body from a task */
 function taskToEventBody(task: Task): {
   summary: string;
@@ -39,13 +56,13 @@ function taskToEventBody(task: Task): {
   end: string;
   description?: string;
 } {
-  const due = task.due || new Date().toISOString().slice(0, 10);
-  const tags: string[] = [];
-  if (task.contexts.length) tags.push(task.contexts.map((c) => `#${c}`).join(" "));
-  if (task.projects.length) tags.push(task.projects.map((p) => `+${p}`).join(" "));
+  const descParts: string[] = [];
+  if (task.contexts.length) descParts.push(task.contexts.map((c) => `#${c}`).join(" "));
+  if (task.projects.length) descParts.push(task.projects.map((p) => `+${p}`).join(" "));
+  if (task.tags.length) descParts.push(task.tags.map((t) => `[${t}]`).join(" "));
 
   const description = [
-    tags.length ? tags.join("  ") : "",
+    descParts.length ? descParts.join("  ") : "",
     task.body ? `\n${task.body}` : "",
   ]
     .filter(Boolean)
@@ -57,10 +74,26 @@ function taskToEventBody(task: Task): {
   if (task.priority !== "none") prefix.push(task.priority.toUpperCase());
   const summary = prefix.length ? `[${prefix.join(" ")}] ${task.title}` : task.title;
 
+  // Determine start/end from scheduled or due date
+  if (task.scheduled && task.scheduled.includes("T")) {
+    // Timed event: scheduled has datetime (e.g. "2026-04-06T14:00")
+    const startDate = new Date(task.scheduled);
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // default 1 hour
+    return {
+      summary,
+      start: toLocalISO(startDate),
+      end: toLocalISO(endDate),
+      description,
+    };
+  }
+
+  // All-day event: use scheduled date if available, otherwise due date
+  const dateStr = task.scheduled || task.due || new Date().toISOString().slice(0, 10);
+
   return {
     summary,
-    start: due,
-    end: due,
+    start: dateStr,
+    end: dateStr,
     description,
   };
 }

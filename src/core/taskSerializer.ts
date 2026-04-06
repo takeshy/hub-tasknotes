@@ -1,26 +1,32 @@
 /**
  * Serialize / deserialize tasks to/from Markdown with YAML frontmatter.
  *
- * Format:
+ * Format aligned with callumalpass/tasknotes:
  * ---
  * title: Buy groceries
  * status: todo
  * due: "2026-04-10"
+ * scheduled: "2026-04-10T14:00"
  * priority: medium
- * contexts: [errands, home]
- * projects: [shopping]
+ * contexts: [@errands, @home]
+ * tags: [shopping]
+ * projects: [renovation]
  * timeEstimate: 30
  * timeEntries: []
  * recurrence: null
- * completeInstances: []
- * dependencies: []
- * created: "2026-04-05T10:00:00Z"
- * modified: "2026-04-05T10:00:00Z"
+ * complete_instances: []
+ * skipped_instances: []
+ * blockedBy: []
+ * blocking: []
+ * archived: false
+ * completedDate: null
+ * createdDate: "2026-04-05T10:00:00Z"
+ * modifiedDate: "2026-04-05T10:00:00Z"
  * ---
  * Body / notes in Markdown
  */
 
-import { Task, TaskStatus, TaskPriority, TimeEntry, RecurrenceRule, TaskDependency } from "../types";
+import { Task, TaskStatus, TaskPriority, TimeEntry, RecurrenceRule } from "../types";
 
 /** Parse YAML frontmatter from a Markdown string */
 export function parseTask(id: string, markdown: string): Task {
@@ -38,17 +44,23 @@ export function parseTask(id: string, markdown: string): Task {
     title: getString(fields, "title", id),
     status: getEnum(fields, "status", ["todo", "in_progress", "done", "cancelled"], "todo") as TaskStatus,
     due: getString(fields, "due", "") || null,
+    scheduled: getString(fields, "scheduled", "") || null,
     priority: getEnum(fields, "priority", ["none", "low", "medium", "high", "urgent"], "none") as TaskPriority,
     contexts: getArray(fields, "contexts"),
+    tags: getArray(fields, "tags"),
     projects: getArray(fields, "projects"),
     timeEstimate: getNumber(fields, "timeEstimate", null),
     timeEntries: getTimeEntries(fields),
     recurrence: getRecurrence(fields),
-    completeInstances: getArray(fields, "completeInstances"),
-    dependencies: getDependencies(fields),
+    complete_instances: getArray(fields, "complete_instances"),
+    skipped_instances: getArray(fields, "skipped_instances"),
+    blockedBy: getArray(fields, "blockedBy"),
+    blocking: getArray(fields, "blocking"),
     body,
-    created: getString(fields, "created", new Date().toISOString()),
-    modified: getString(fields, "modified", new Date().toISOString()),
+    archived: getString(fields, "archived", "false") === "true",
+    completedDate: getString(fields, "completedDate", "") || null,
+    createdDate: getString(fields, "createdDate", "") || getString(fields, "created", "") || new Date().toISOString(),
+    modifiedDate: getString(fields, "modifiedDate", "") || getString(fields, "modified", "") || new Date().toISOString(),
     calendarEventId: getString(fields, "calendarEventId", "") || undefined,
     calendarHtmlLink: getString(fields, "calendarHtmlLink", "") || undefined,
   };
@@ -61,8 +73,10 @@ export function serializeTask(task: Task): string {
   lines.push(`title: ${quoteIfNeeded(task.title)}`);
   lines.push(`status: ${task.status}`);
   lines.push(`due: ${task.due ? `"${task.due}"` : "null"}`);
+  lines.push(`scheduled: ${task.scheduled ? `"${task.scheduled}"` : "null"}`);
   lines.push(`priority: ${task.priority}`);
   lines.push(`contexts: ${formatArray(task.contexts)}`);
+  lines.push(`tags: ${formatArray(task.tags)}`);
   lines.push(`projects: ${formatArray(task.projects)}`);
   lines.push(`timeEstimate: ${task.timeEstimate ?? "null"}`);
   lines.push(`timeEntries: ${formatTimeEntries(task.timeEntries)}`);
@@ -70,21 +84,25 @@ export function serializeTask(task: Task): string {
   if (task.recurrence) {
     lines.push(`recurrence:`);
     lines.push(`  rrule: "${task.recurrence.rrule}"`);
-    lines.push(`  flexible: ${task.recurrence.flexible}`);
+    lines.push(`  recurrenceAnchor: ${task.recurrence.recurrenceAnchor}`);
   } else {
     lines.push(`recurrence: null`);
   }
 
-  lines.push(`completeInstances: ${formatArray(task.completeInstances)}`);
-  lines.push(`dependencies: ${formatDependencies(task.dependencies)}`);
+  lines.push(`complete_instances: ${formatArray(task.complete_instances)}`);
+  lines.push(`skipped_instances: ${formatArray(task.skipped_instances)}`);
+  lines.push(`blockedBy: ${formatArray(task.blockedBy)}`);
+  lines.push(`blocking: ${formatArray(task.blocking)}`);
+  lines.push(`archived: ${task.archived}`);
+  lines.push(`completedDate: ${task.completedDate ? `"${task.completedDate}"` : "null"}`);
   if (task.calendarEventId) {
     lines.push(`calendarEventId: "${task.calendarEventId}"`);
   }
   if (task.calendarHtmlLink) {
     lines.push(`calendarHtmlLink: "${task.calendarHtmlLink}"`);
   }
-  lines.push(`created: "${task.created}"`);
-  lines.push(`modified: "${task.modified}"`);
+  lines.push(`createdDate: "${task.createdDate}"`);
+  lines.push(`modifiedDate: "${task.modifiedDate}"`);
   lines.push("---");
 
   if (task.body) {
@@ -103,17 +121,23 @@ export function createDefaultTask(id: string, title: string): Task {
     title,
     status: "todo",
     due: null,
+    scheduled: null,
     priority: "none",
     contexts: [],
+    tags: [],
     projects: [],
     timeEstimate: null,
     timeEntries: [],
     recurrence: null,
-    completeInstances: [],
-    dependencies: [],
+    complete_instances: [],
+    skipped_instances: [],
+    blockedBy: [],
+    blocking: [],
     body: "",
-    created: now,
-    modified: now,
+    archived: false,
+    completedDate: null,
+    createdDate: now,
+    modifiedDate: now,
   };
 }
 
@@ -193,7 +217,13 @@ function getTimeEntries(fields: Record<string, string>): TimeEntry[] {
   try {
     // Try JSON parse for complex arrays
     const parsed = JSON.parse(v.replace(/'/g, '"'));
-    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed)) {
+      // Normalize legacy field names (startTime/endTime → start/end)
+      return parsed.map((e: any) => ({
+        start: e.start || e.startTime,
+        end: e.end ?? e.endTime ?? null,
+      }));
+    }
   } catch {
     // ignore
   }
@@ -205,26 +235,19 @@ function getRecurrence(fields: Record<string, string>): RecurrenceRule | null {
   if (!v || v === "null") return null;
   // Parse indented sub-keys
   const rruleMatch = v.match(/rrule:\s*"?([^"]*)"?/);
+  const anchorMatch = v.match(/recurrenceAnchor:\s*(\w+)/);
+  // Legacy support: flexible → recurrenceAnchor
   const flexMatch = v.match(/flexible:\s*(true|false)/);
   if (rruleMatch) {
-    return {
-      rrule: rruleMatch[1],
-      flexible: flexMatch ? flexMatch[1] === "true" : false,
-    };
+    let anchor: "scheduled" | "completion" = "scheduled";
+    if (anchorMatch) {
+      anchor = anchorMatch[1] === "completion" ? "completion" : "scheduled";
+    } else if (flexMatch) {
+      anchor = flexMatch[1] === "true" ? "completion" : "scheduled";
+    }
+    return { rrule: rruleMatch[1], recurrenceAnchor: anchor };
   }
   return null;
-}
-
-function getDependencies(fields: Record<string, string>): TaskDependency[] {
-  const v = fields["dependencies"];
-  if (!v || v === "null" || v === "[]") return [];
-  try {
-    const parsed = JSON.parse(v.replace(/'/g, '"'));
-    if (Array.isArray(parsed)) return parsed;
-  } catch {
-    // ignore
-  }
-  return [];
 }
 
 function quoteIfNeeded(s: string): string {
@@ -242,9 +265,4 @@ function formatArray(arr: string[]): string {
 function formatTimeEntries(entries: TimeEntry[]): string {
   if (entries.length === 0) return "[]";
   return JSON.stringify(entries);
-}
-
-function formatDependencies(deps: TaskDependency[]): string {
-  if (deps.length === 0) return "[]";
-  return JSON.stringify(deps);
 }

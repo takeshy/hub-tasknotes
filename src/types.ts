@@ -11,31 +11,23 @@ export type ViewType = "list" | "kanban" | "calendar" | "agenda";
 export type CalendarLayout = "month" | "week" | "day";
 
 /** Sort field */
-export type SortField = "title" | "due" | "priority" | "status" | "created" | "urgencyScore";
+export type SortField = "title" | "due" | "scheduled" | "priority" | "status" | "createdDate" | "urgencyScore";
 
 /** Sort direction */
 export type SortDirection = "asc" | "desc";
 
 /** Time entry for time tracking */
 export interface TimeEntry {
-  startTime: string; // ISO 8601
-  endTime: string | null; // null if currently running
+  start: string; // ISO 8601
+  end: string | null; // null if currently running
 }
 
 /** Recurrence rule (subset of RRULE) */
 export interface RecurrenceRule {
   /** RRULE string (e.g. "FREQ=DAILY;INTERVAL=1") */
   rrule: string;
-  /** Whether schedule is flexible (from completion) or fixed (from due date) */
-  flexible: boolean;
-}
-
-/** Task dependency */
-export interface TaskDependency {
-  /** ID of the task this depends on */
-  taskId: string;
-  /** Type of dependency */
-  type: "blocks" | "blocked_by";
+  /** Whether next occurrence is from scheduled/due date or from completion date */
+  recurrenceAnchor: "scheduled" | "completion";
 }
 
 /** A single task — stored as YAML frontmatter in a .md file */
@@ -46,12 +38,16 @@ export interface Task {
   title: string;
   /** Current status */
   status: TaskStatus;
-  /** Due date (ISO 8601 date string, e.g. "2026-04-10") */
+  /** Due date — hard deadline (YYYY-MM-DD) */
   due: string | null;
+  /** Scheduled date/time — when to do (YYYY-MM-DD or YYYY-MM-DDTHH:MM) */
+  scheduled: string | null;
   /** Priority level */
   priority: TaskPriority;
-  /** Context tags (e.g. ["home", "errands"]) */
+  /** Context tags (e.g. ["@home", "@work"]) */
   contexts: string[];
+  /** Tags for categorization (e.g. ["errands", "shopping"]) */
+  tags: string[];
   /** Project names */
   projects: string[];
   /** Estimated time in minutes */
@@ -61,15 +57,23 @@ export interface Task {
   /** Recurrence rule */
   recurrence: RecurrenceRule | null;
   /** Completed recurrence instances (ISO date strings) */
-  completeInstances: string[];
-  /** Task dependencies */
-  dependencies: TaskDependency[];
+  complete_instances: string[];
+  /** Skipped recurrence instances (ISO date strings) */
+  skipped_instances: string[];
+  /** Task IDs that block this task */
+  blockedBy: string[];
+  /** Task IDs that this task blocks */
+  blocking: string[];
   /** Markdown body content (notes) */
   body: string;
+  /** Whether task is archived */
+  archived: boolean;
+  /** Date when task was completed (ISO 8601) */
+  completedDate: string | null;
   /** Creation date (ISO 8601) */
-  created: string;
+  createdDate: string;
   /** Last modified date (ISO 8601) */
-  modified: string;
+  modifiedDate: string;
   /** Google Calendar event ID (if synced) */
   calendarEventId?: string;
   /** Google Calendar event HTML link */
@@ -95,11 +99,13 @@ export interface TaskFilter {
   status?: TaskStatus[];
   priority?: TaskPriority[];
   contexts?: string[];
+  tags?: string[];
   projects?: string[];
   dueBefore?: string;
   dueAfter?: string;
   search?: string;
   hideCompleted?: boolean;
+  hideArchived?: boolean;
 }
 
 /** Sort configuration */

@@ -65,7 +65,7 @@ export class TaskService {
 
   /** Update an existing task */
   async update(task: Task): Promise<Task> {
-    const updated = { ...task, modified: new Date().toISOString() };
+    const updated = { ...task, modifiedDate: new Date().toISOString() };
     const content = serializeTask(updated);
     const cached = this.cache.get(task.id);
     if (cached) {
@@ -93,17 +93,19 @@ export class TaskService {
     const today = new Date().toISOString().slice(0, 10);
 
     if (task.recurrence) {
-      task.completeInstances = [...task.completeInstances, today];
-      const baseDate = task.recurrence.flexible ? today : (task.due || today);
+      task.complete_instances = [...task.complete_instances, today];
+      const baseDate = task.recurrence.recurrenceAnchor === "completion" ? today : (task.due || today);
       const nextDue = getNextOccurrence(task.recurrence, baseDate);
       if (nextDue) {
         task.due = nextDue;
         task.status = "todo";
       } else {
         task.status = "done";
+        task.completedDate = new Date().toISOString();
       }
     } else {
       task.status = "done";
+      task.completedDate = new Date().toISOString();
     }
 
     return this.update(task);
@@ -152,6 +154,12 @@ export class TaskService {
     if (filter.dueAfter) {
       result = result.filter((t) => t.due && t.due >= filter.dueAfter!);
     }
+    if (filter.tags && filter.tags.length > 0) {
+      result = result.filter((t) => t.tags.some((tag) => filter.tags!.includes(tag)));
+    }
+    if (filter.hideArchived) {
+      result = result.filter((t) => !t.archived);
+    }
     if (filter.search) {
       const q = filter.search.toLowerCase();
       result = result.filter(
@@ -178,8 +186,14 @@ export class TaskService {
           return (PRIORITY_VALUES[a.priority] - PRIORITY_VALUES[b.priority]) * dir;
         case "status":
           return a.status.localeCompare(b.status) * dir;
-        case "created":
-          return a.created.localeCompare(b.created) * dir;
+        case "createdDate":
+          return a.createdDate.localeCompare(b.createdDate) * dir;
+        case "scheduled": {
+          if (!a.scheduled && !b.scheduled) return 0;
+          if (!a.scheduled) return 1;
+          if (!b.scheduled) return -1;
+          return a.scheduled.localeCompare(b.scheduled) * dir;
+        }
         case "urgencyScore": {
           const aScore = computeFormulas(a).urgencyScore;
           const bScore = computeFormulas(b).urgencyScore;

@@ -39,7 +39,7 @@ describe("computeFormulas", () => {
     const task = createDefaultTask("t1", "Tracked");
     const start = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
     const end = new Date();
-    task.timeEntries = [{ startTime: start.toISOString(), endTime: end.toISOString() }];
+    task.timeEntries = [{ start: start.toISOString(), end: end.toISOString() }];
     const f = computeFormulas(task);
     expect(f.totalTrackedTime).toBeGreaterThanOrEqual(59);
     expect(f.totalTrackedTime).toBeLessThanOrEqual(61);
@@ -50,7 +50,7 @@ describe("computeFormulas", () => {
     task.timeEstimate = 60;
     const start = new Date(Date.now() - 30 * 60 * 1000); // 30 min ago
     const end = new Date();
-    task.timeEntries = [{ startTime: start.toISOString(), endTime: end.toISOString() }];
+    task.timeEntries = [{ start: start.toISOString(), end: end.toISOString() }];
     const f = computeFormulas(task);
     expect(f.efficiencyRatio).toBeGreaterThan(1.5);
     expect(f.efficiencyRatio).toBeLessThanOrEqual(2.1);

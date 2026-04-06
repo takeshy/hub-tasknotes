@@ -23,8 +23,10 @@ Fields:
 - title (string, required)
 - status (string: "todo"|"in_progress"|"done"|"cancelled", default "todo")
 - due (string YYYY-MM-DD or null)
+- scheduled (string YYYY-MM-DD or YYYY-MM-DDTHH:MM for date+time, or null)
 - priority (string: "none"|"low"|"medium"|"high"|"urgent", default "none")
 - contexts (string array, e.g. ["errands","home"])
+- tags (string array, e.g. ["review","urgent"])
 - projects (string array, e.g. ["shopping"])
 - timeEstimate (number in minutes or null)
 - body (string, additional notes extracted from the input, default "")
@@ -143,17 +145,23 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
         title: parsed.title || aiInput,
         status: parsed.status || "todo",
         due: parsed.due || null,
+        scheduled: parsed.scheduled || null,
         priority: parsed.priority || "none",
         contexts: Array.isArray(parsed.contexts) ? parsed.contexts : [],
+        tags: Array.isArray(parsed.tags) ? parsed.tags : [],
         projects: Array.isArray(parsed.projects) ? parsed.projects : [],
         timeEstimate: typeof parsed.timeEstimate === "number" ? parsed.timeEstimate : null,
         timeEntries: [],
         recurrence: null,
-        completeInstances: [],
-        dependencies: [],
+        complete_instances: [],
+        skipped_instances: [],
+        blockedBy: [],
+        blocking: [],
         body: parsed.body || "",
-        created: now,
-        modified: now,
+        archived: false,
+        completedDate: null,
+        createdDate: now,
+        modifiedDate: now,
       };
       setAiModalOpen(false);
       setAiInput("");
@@ -277,7 +285,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
   const handleSyncAllTasks = async () => {
     if (!serviceRef.current || !api.calendar) return;
     const tasksWithDue = store.tasks.filter(
-      (t) => t.due && t.status !== "cancelled"
+      (t) => (t.due || t.scheduled) && t.status !== "cancelled"
     );
     let updatedTasks = [...store.tasks];
     for (const task of tasksWithDue) {

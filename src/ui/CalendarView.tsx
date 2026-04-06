@@ -54,8 +54,9 @@ export function CalendarView({ tasks, onSelect, layout, onLayoutChange, locale, 
   const tasksByDate = React.useMemo(() => {
     const map = new Map<string, Task[]>();
     for (const task of tasks) {
-      if (!task.due) continue;
-      const key = task.due;
+      const dateValue = task.scheduled || task.due;
+      if (!dateValue) continue;
+      const key = dateValue.slice(0, 10);
       const arr = map.get(key) || [];
       arr.push(task);
       map.set(key, arr);

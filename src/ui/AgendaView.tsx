@@ -34,11 +34,13 @@ export function AgendaView({ tasks, onSelect, onComplete, locale }: AgendaViewPr
 
     for (const task of tasks) {
       if (task.status === "done" || task.status === "cancelled") continue;
-      if (!task.due) {
+      const dateValue = (task.scheduled || task.due);
+      const dateKey = dateValue ? dateValue.slice(0, 10) : null;
+      if (!dateKey) {
         noDue.push(task);
-      } else if (task.due < todayStr) {
+      } else if (dateKey < todayStr) {
         overdue.push(task);
-      } else if (task.due === todayStr) {
+      } else if (dateKey === todayStr) {
         today.push(task);
       } else {
         upcoming.push(task);
@@ -47,7 +49,9 @@ export function AgendaView({ tasks, onSelect, onComplete, locale }: AgendaViewPr
 
     // Sort each group by due date then priority
     const sortTasks = (a: Task, b: Task) => {
-      if (a.due && b.due && a.due !== b.due) return a.due.localeCompare(b.due);
+      const aDate = (a.scheduled || a.due);
+      const bDate = (b.scheduled || b.due);
+      if (aDate && bDate && aDate !== bDate) return aDate.localeCompare(bDate);
       return (b.priority === "urgent" ? 4 : 0) - (a.priority === "urgent" ? 4 : 0);
     };
 

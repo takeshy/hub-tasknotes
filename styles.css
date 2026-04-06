@@ -413,6 +413,16 @@
   font-weight: 600;
 }
 
+.tn-scheduled {
+  color: var(--tn-accent);
+  font-size: 0.8em;
+}
+
+.tn-tag {
+  color: #a78bfa;
+  font-size: 0.8em;
+}
+
 /* ============================================
    Priority Badges
    ============================================ */

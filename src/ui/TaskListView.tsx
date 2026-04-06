@@ -84,6 +84,11 @@ function TaskRow({ task, formulas, active, onSelect, onComplete, onStartTimer, o
               {formulas.daysUntilDue !== null && !formulas.isOverdue && ` (${formulas.daysUntilDue}${i.days})`}
             </span>
           )}
+          {task.scheduled && (
+            <span className="tn-scheduled">
+              {i.scheduled}: {task.scheduled.includes("T") ? task.scheduled.replace("T", " ") : task.scheduled}
+            </span>
+          )}
           {task.priority !== "none" && (
             <span className={`tn-priority-badge tn-priority-${task.priority}`}>
               {i[`priority${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}` as keyof typeof i] as string}
@@ -91,6 +96,9 @@ function TaskRow({ task, formulas, active, onSelect, onComplete, onStartTimer, o
           )}
           {task.contexts.map((c) => (
             <span key={c} className="tn-context-tag">#{c}</span>
+          ))}
+          {task.tags.map((tag) => (
+            <span key={tag} className="tn-context-tag">{tag}</span>
           ))}
           {task.projects.map((p) => (
             <span key={p} className="tn-project-tag">+{p}</span>

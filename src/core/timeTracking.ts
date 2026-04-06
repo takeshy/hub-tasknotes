@@ -10,14 +10,14 @@ export function startTimer(task: Task): Task {
   if (hasRunningTimer(task)) return task;
 
   const entry: TimeEntry = {
-    startTime: new Date().toISOString(),
-    endTime: null,
+    start: new Date().toISOString(),
+    end: null,
   };
 
   return {
     ...task,
     timeEntries: [...task.timeEntries, entry],
-    modified: new Date().toISOString(),
+    modifiedDate: new Date().toISOString(),
   };
 }
 
@@ -26,8 +26,8 @@ export function stopTimer(task: Task): Task {
   if (!hasRunningTimer(task)) return task;
 
   const entries = task.timeEntries.map((entry) => {
-    if (entry.endTime === null) {
-      return { ...entry, endTime: new Date().toISOString() };
+    if (entry.end === null) {
+      return { ...entry, end: new Date().toISOString() };
     }
     return entry;
   });
@@ -35,20 +35,20 @@ export function stopTimer(task: Task): Task {
   return {
     ...task,
     timeEntries: entries,
-    modified: new Date().toISOString(),
+    modifiedDate: new Date().toISOString(),
   };
 }
 
 /** Check if a task has a running timer */
 export function hasRunningTimer(task: Task): boolean {
-  return task.timeEntries.some((entry) => entry.endTime === null);
+  return task.timeEntries.some((entry) => entry.end === null);
 }
 
 /** Get elapsed time of current running entry in seconds */
 export function getRunningElapsed(task: Task): number {
-  const running = task.timeEntries.find((entry) => entry.endTime === null);
+  const running = task.timeEntries.find((entry) => entry.end === null);
   if (!running) return 0;
-  return Math.floor((Date.now() - new Date(running.startTime).getTime()) / 1000);
+  return Math.floor((Date.now() - new Date(running.start).getTime()) / 1000);
 }
 
 /** Format seconds as "Xh Ym" or "Ym Zs" */

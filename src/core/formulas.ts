@@ -30,8 +30,8 @@ function calcDaysUntilDue(task: Task): number | null {
 function calcTotalTrackedTime(task: Task): number {
   let total = 0;
   for (const entry of task.timeEntries) {
-    const start = new Date(entry.startTime).getTime();
-    const end = entry.endTime ? new Date(entry.endTime).getTime() : Date.now();
+    const start = new Date(entry.start).getTime();
+    const end = entry.end ? new Date(entry.end).getTime() : Date.now();
     total += (end - start) / (1000 * 60);
   }
   return Math.round(total);

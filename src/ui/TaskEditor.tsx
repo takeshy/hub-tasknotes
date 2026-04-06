@@ -29,22 +29,31 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
       title: "",
       status: "todo",
       due: null,
+      scheduled: null,
       priority: "none",
       contexts: [],
+      tags: [],
       projects: [],
       timeEstimate: null,
       timeEntries: [],
       recurrence: null,
-      completeInstances: [],
-      dependencies: [],
+      complete_instances: [],
+      skipped_instances: [],
+      blockedBy: [],
+      blocking: [],
       body: "",
-      created: new Date().toISOString(),
-      modified: new Date().toISOString(),
+      archived: false,
+      completedDate: null,
+      createdDate: new Date().toISOString(),
+      modifiedDate: new Date().toISOString(),
     },
   );
 
   const [contextsInput, setContextsInput] = React.useState(form.contexts.join(", "));
+  const [tagsInput, setTagsInput] = React.useState(form.tags.join(", "));
   const [projectsInput, setProjectsInput] = React.useState(form.projects.join(", "));
+  const [scheduledDate, setScheduledDate] = React.useState(form.scheduled ? form.scheduled.slice(0, 10) : "");
+  const [scheduledTime, setScheduledTime] = React.useState(form.scheduled && form.scheduled.includes("T") ? form.scheduled.slice(11, 16) : "");
   const [recurrencePreset, setRecurrencePreset] = React.useState("none");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -52,6 +61,10 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
     if (!form.title.trim()) return;
 
     const contexts = contextsInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const tags = tagsInput
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
@@ -63,8 +76,9 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
     onSave({
       ...form,
       contexts,
+      tags,
       projects,
-      modified: new Date().toISOString(),
+      modifiedDate: new Date().toISOString(),
     });
   };
 
@@ -83,7 +97,7 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
         monthly: "FREQ=MONTHLY;INTERVAL=1",
         yearly: "FREQ=YEARLY;INTERVAL=1",
       };
-      setField("recurrence", { rrule: rruleMap[preset] || buildRRule({ freq: "DAILY" }), flexible: false });
+      setField("recurrence", { rrule: rruleMap[preset] || buildRRule({ freq: "DAILY" }), recurrenceAnchor: "scheduled" });
     }
   };
 
@@ -99,8 +113,9 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
               title={i.openNote}
               onClick={() => {
                 const contexts = contextsInput.split(",").map((s) => s.trim()).filter(Boolean);
+                const tags = tagsInput.split(",").map((s) => s.trim()).filter(Boolean);
                 const projects = projectsInput.split(",").map((s) => s.trim()).filter(Boolean);
-                onOpenNote({ ...form, contexts, projects, modified: new Date().toISOString() }, fileId!);
+                onOpenNote({ ...form, contexts, tags, projects, modifiedDate: new Date().toISOString() }, fileId!);
               }}
             >
               &#x2197;
@@ -164,6 +179,41 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
           </label>
         </div>
 
+        <div className="tn-field-row">
+          <label className="tn-field">
+            <span>{i.scheduled}</span>
+            <input
+              type="date"
+              value={scheduledDate}
+              onChange={(e) => {
+                const d = e.target.value;
+                setScheduledDate(d);
+                if (d) {
+                  setField("scheduled", scheduledTime ? `${d}T${scheduledTime}` : d);
+                } else {
+                  setScheduledTime("");
+                  setField("scheduled", null);
+                }
+              }}
+            />
+          </label>
+          <label className="tn-field">
+            <span>{i.dueTime}</span>
+            <input
+              type="time"
+              value={scheduledTime}
+              disabled={!scheduledDate}
+              onChange={(e) => {
+                const tm = e.target.value;
+                setScheduledTime(tm);
+                if (scheduledDate) {
+                  setField("scheduled", tm ? `${scheduledDate}T${tm}` : scheduledDate);
+                }
+              }}
+            />
+          </label>
+        </div>
+
         <label className="tn-field">
           <span>{i.contexts} (comma-separated)</span>
           <input
@@ -171,6 +221,16 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
             value={contextsInput}
             onChange={(e) => setContextsInput(e.target.value)}
             placeholder="errands, home, work"
+          />
+        </label>
+
+        <label className="tn-field">
+          <span>{i.tags} (comma-separated)</span>
+          <input
+            type="text"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            placeholder="errands, review"
           />
         </label>
 

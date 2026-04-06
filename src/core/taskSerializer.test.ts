@@ -15,10 +15,20 @@ describe("taskSerializer", () => {
     const original = createDefaultTask("test-1", "Buy groceries");
     original.status = "in_progress";
     original.due = "2026-04-10";
+    original.scheduled = "2026-04-09T14:00";
     original.priority = "high";
     original.contexts = ["errands", "home"];
-    original.projects = ["shopping"];
+    original.tags = ["shopping", "weekly"];
+    original.projects = ["renovation"];
     original.timeEstimate = 30;
+    original.timeEntries = [{ start: "2026-04-05T10:00:00Z", end: "2026-04-05T10:30:00Z" }];
+    original.recurrence = { rrule: "FREQ=WEEKLY;INTERVAL=1", recurrenceAnchor: "scheduled" };
+    original.complete_instances = ["2026-04-02"];
+    original.skipped_instances = ["2026-04-01"];
+    original.blockedBy = ["task-abc"];
+    original.blocking = ["task-xyz"];
+    original.archived = false;
+    original.completedDate = null;
     original.body = "- Milk\n- Bread";
 
     const markdown = serializeTask(original);
@@ -28,10 +38,20 @@ describe("taskSerializer", () => {
     expect(parsed.title).toBe(original.title);
     expect(parsed.status).toBe(original.status);
     expect(parsed.due).toBe(original.due);
+    expect(parsed.scheduled).toBe(original.scheduled);
     expect(parsed.priority).toBe(original.priority);
     expect(parsed.contexts).toEqual(original.contexts);
+    expect(parsed.tags).toEqual(original.tags);
     expect(parsed.projects).toEqual(original.projects);
     expect(parsed.timeEstimate).toBe(original.timeEstimate);
+    expect(parsed.timeEntries).toEqual(original.timeEntries);
+    expect(parsed.recurrence).toEqual(original.recurrence);
+    expect(parsed.complete_instances).toEqual(original.complete_instances);
+    expect(parsed.skipped_instances).toEqual(original.skipped_instances);
+    expect(parsed.blockedBy).toEqual(original.blockedBy);
+    expect(parsed.blocking).toEqual(original.blocking);
+    expect(parsed.archived).toBe(original.archived);
+    expect(parsed.completedDate).toBe(original.completedDate);
     expect(parsed.body).toBe(original.body);
   });
 
@@ -43,9 +63,9 @@ describe("taskSerializer", () => {
 
   it("serializes recurrence correctly", () => {
     const task = createDefaultTask("test-1", "Daily check");
-    task.recurrence = { rrule: "FREQ=DAILY;INTERVAL=1", flexible: true };
+    task.recurrence = { rrule: "FREQ=DAILY;INTERVAL=1", recurrenceAnchor: "completion" };
     const md = serializeTask(task);
     expect(md).toContain('rrule: "FREQ=DAILY;INTERVAL=1"');
-    expect(md).toContain("flexible: true");
+    expect(md).toContain("recurrenceAnchor: completion");
   });
 });

@@ -15,10 +15,17 @@ export interface Translations {
   projects: string;
   timeEstimate: string;
   recurrence: string;
-  dependencies: string;
   notes: string;
-  created: string;
-  modified: string;
+  createdDate: string;
+  modifiedDate: string;
+  scheduled: string;
+  tags: string;
+  archived: string;
+  completedDate: string;
+  skippedInstances: string;
+  blockedBy: string;
+  blocking: string;
+  dueTime: string;
   // Statuses
   statusTodo: string;
   statusInProgress: string;
@@ -62,8 +69,6 @@ export interface Translations {
   recurrenceMonthly: string;
   recurrenceYearly: string;
   recurrenceCustom: string;
-  recurrenceFlexible: string;
-  recurrenceFixed: string;
   // Filters
   filterByStatus: string;
   filterByPriority: string;
@@ -152,10 +157,17 @@ const en: Translations = {
   projects: "Projects",
   timeEstimate: "Time Estimate",
   recurrence: "Recurrence",
-  dependencies: "Dependencies",
   notes: "Notes",
-  created: "Created",
-  modified: "Modified",
+  createdDate: "Created",
+  modifiedDate: "Modified",
+  scheduled: "Scheduled",
+  tags: "Tags",
+  archived: "Archived",
+  completedDate: "Completed Date",
+  skippedInstances: "Skipped",
+  blockedBy: "Blocked By",
+  blocking: "Blocking",
+  dueTime: "Time",
   // Statuses
   statusTodo: "To Do",
   statusInProgress: "In Progress",
@@ -199,8 +211,6 @@ const en: Translations = {
   recurrenceMonthly: "Monthly",
   recurrenceYearly: "Yearly",
   recurrenceCustom: "Custom",
-  recurrenceFlexible: "Flexible (from completion)",
-  recurrenceFixed: "Fixed (from due date)",
   // Filters
   filterByStatus: "Filter by status",
   filterByPriority: "Filter by priority",
@@ -289,10 +299,17 @@ const ja: Translations = {
   projects: "プロジェクト",
   timeEstimate: "見積もり時間",
   recurrence: "繰り返し",
-  dependencies: "依存関係",
   notes: "メモ",
-  created: "作成日",
-  modified: "更新日",
+  createdDate: "作成日",
+  modifiedDate: "更新日",
+  scheduled: "予定日時",
+  tags: "タグ",
+  archived: "アーカイブ",
+  completedDate: "完了日",
+  skippedInstances: "スキップ",
+  blockedBy: "ブロック元",
+  blocking: "ブロック先",
+  dueTime: "時刻",
   // Statuses
   statusTodo: "未着手",
   statusInProgress: "進行中",
@@ -336,8 +353,6 @@ const ja: Translations = {
   recurrenceMonthly: "毎月",
   recurrenceYearly: "毎年",
   recurrenceCustom: "カスタム",
-  recurrenceFlexible: "柔軟（完了日基準）",
-  recurrenceFixed: "固定（期日基準）",
   // Filters
   filterByStatus: "ステータスで絞り込み",
   filterByPriority: "優先度で絞り込み",

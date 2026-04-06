@@ -100,7 +100,7 @@ export function createTaskFromNaturalLanguage(input: string): Task {
   task.priority = parsed.priority;
 
   if (parsed.recurrence) {
-    task.recurrence = { rrule: parsed.recurrence, flexible: false };
+    task.recurrence = { rrule: parsed.recurrence, recurrenceAnchor: "scheduled" };
   }
 
   return task;
