@@ -13,6 +13,7 @@
 - **計算プロパティ** — 緊急度スコア、期日までの日数、期限超過検出、効率比
 - **コンテキスト & プロジェクト** — `#コンテキスト` と `+プロジェクト` でタスクをタグ付け・絞り込み
 - **依存関係** — タスク間のブロック関係を定義
+- **Google Calendar 同期** — タスクをGoogle Calendarに同期、カレンダービューに予定を表示（プレミアムプラン）
 - **国際化** — 英語・日本語 UI
 
 ## インストール
@@ -43,6 +44,15 @@ npm run build
 5. タイマーボタンでタイムトラッキングの開始/停止、またはポモドーロセッションを開始します。
 6. ステータス、優先度、コンテキスト、プロジェクトで絞り込み。タイトル、期日、優先度、緊急度でソート。
 
+### Google Calendar 同期
+
+**プレミアムプラン**（Google Calendar スコープ付き）が必要です。
+
+1. **設定** を開き、**Google Calendar 同期** を有効にします。
+2. 期日のあるタスクは、タスクエディタから個別に同期するか、ツールバーのカレンダーボタンで一括同期できます。
+3. **カレンダー** ビューでは、Google Calendar の予定が緑色でタスクと一緒に表示されます。
+4. 同期済みタスクには Google Calendar で予定を直接開くリンクが表示されます。
+
 ### タスクファイル形式
 
 各タスクは設定されたタスクフォルダ内にYAMLフロントマター付きの `.md` ファイルとして保存されます:
@@ -60,6 +70,8 @@ timeEntries: []
 recurrence: null
 completeInstances: []
 dependencies: []
+calendarEventId: "abc123"
+calendarHtmlLink: "https://calendar.google.com/..."
 created: "2026-04-05T10:00:00Z"
 modified: "2026-04-05T10:00:00Z"
 ---
@@ -93,6 +105,7 @@ modified: "2026-04-05T10:00:00Z"
 | ポモドーロ時間 | 作業セッションの長さ（分） |
 | ポモドーロ休憩 | 休憩の長さ（分） |
 | デフォルトカレンダー表示 | 月・週・日 |
+| Google Calendar 同期 | Google Calendar との同期を有効化（プレミアム） |
 
 ## Plugin API の使用
 
@@ -103,6 +116,7 @@ modified: "2026-04-05T10:00:00Z"
 - `api.registerCommand()` — コマンドの登録（タスク作成、ビュー切替）
 - `api.drive.listFiles/readFile/createFile/updateFile/deleteFile()` — タスクMarkdownファイルのCRUD操作
 - `api.storage.get/set()` — プラグイン設定の永続化
+- `api.calendar.listEvents/createEvent/updateEvent/deleteEvent()` — Google Calendar 同期（プレミアム）
 
 ## 開発
 

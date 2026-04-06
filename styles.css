@@ -964,6 +964,84 @@
 }
 
 /* ============================================
+   Google Calendar Events
+   ============================================ */
+.tn-cal-event {
+  font-size: 0.75em;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: rgba(52, 168, 83, 0.15);
+  color: #34a853;
+  border-left: 2px solid #34a853;
+}
+
+.dark .tn-cal-event,
+.tn-panel.dark .tn-cal-event {
+  color: #81c995;
+  background: rgba(129, 201, 149, 0.15);
+  border-left-color: #81c995;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tn-panel:not(.light) .tn-cal-event {
+    color: #81c995;
+    background: rgba(129, 201, 149, 0.15);
+    border-left-color: #81c995;
+  }
+}
+
+.tn-cal-event-row {
+  border-left: 3px solid #34a853;
+}
+
+.tn-cal-event-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+  background: rgba(52, 168, 83, 0.15);
+  color: #34a853;
+}
+
+/* Calendar sync section in editor */
+.tn-calendar-sync-section {
+  padding: 8px 0;
+  border-top: 1px solid var(--tn-border);
+}
+
+.tn-calendar-synced {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tn-calendar-link {
+  color: #34a853;
+  font-size: 0.85em;
+  text-decoration: none;
+}
+
+.tn-calendar-link:hover {
+  text-decoration: underline;
+}
+
+.tn-btn-small {
+  padding: 4px 8px;
+  font-size: 0.8em;
+}
+
+.tn-cal-sync-btn {
+  padding: 4px 8px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ============================================
    Scrollbar
    ============================================ */
 .tn-panel::-webkit-scrollbar {

@@ -14,9 +14,12 @@ interface TaskEditorProps {
   onCancel: () => void;
   onDelete?: (taskId: string) => void;
   locale?: string;
+  calendarAvailable?: boolean;
+  onSyncCalendar?: (taskId: string) => void;
+  onUnsyncCalendar?: (taskId: string) => void;
 }
 
-export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, locale }: TaskEditorProps) {
+export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, locale, calendarAvailable, onSyncCalendar, onUnsyncCalendar }: TaskEditorProps) {
   const i = t(locale);
   const isNew = !task;
   const [form, setForm] = React.useState<Task>(
@@ -204,6 +207,30 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, locale }:
             onChange={(e) => setField("body", e.target.value)}
           />
         </label>
+
+        {/* Calendar sync status */}
+        {!isNew && calendarAvailable && (
+          <div className="tn-calendar-sync-section">
+            {form.calendarHtmlLink ? (
+              <div className="tn-calendar-synced">
+                <a href={form.calendarHtmlLink} target="_blank" rel="noopener noreferrer" className="tn-calendar-link">
+                  {i.calendarOpenEvent} &#x2197;
+                </a>
+                {onUnsyncCalendar && (
+                  <button type="button" className="tn-btn tn-btn-small" onClick={() => onUnsyncCalendar(form.id)}>
+                    {i.calendarUnsyncTask}
+                  </button>
+                )}
+              </div>
+            ) : (
+              onSyncCalendar && (
+                <button type="button" className="tn-btn tn-btn-small" onClick={() => onSyncCalendar(form.id)}>
+                  &#x1F4C5; {i.calendarSyncTask}
+                </button>
+              )
+            )}
+          </div>
+        )}
 
         <div className="tn-editor-actions">
           <button type="submit" className="tn-btn-primary">

@@ -49,6 +49,8 @@ export function parseTask(id: string, markdown: string): Task {
     body,
     created: getString(fields, "created", new Date().toISOString()),
     modified: getString(fields, "modified", new Date().toISOString()),
+    calendarEventId: getString(fields, "calendarEventId", "") || undefined,
+    calendarHtmlLink: getString(fields, "calendarHtmlLink", "") || undefined,
   };
 }
 
@@ -75,6 +77,12 @@ export function serializeTask(task: Task): string {
 
   lines.push(`completeInstances: ${formatArray(task.completeInstances)}`);
   lines.push(`dependencies: ${formatDependencies(task.dependencies)}`);
+  if (task.calendarEventId) {
+    lines.push(`calendarEventId: "${task.calendarEventId}"`);
+  }
+  if (task.calendarHtmlLink) {
+    lines.push(`calendarHtmlLink: "${task.calendarHtmlLink}"`);
+  }
   lines.push(`created: "${task.created}"`);
   lines.push(`modified: "${task.modified}"`);
   lines.push("---");

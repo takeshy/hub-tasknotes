@@ -13,6 +13,7 @@ A [GemiHub](https://github.com/takeshy/gemihub) plugin for task management where
 - **Computed Properties** — Urgency score, days until due, overdue detection, efficiency ratio
 - **Contexts & Projects** — Tag tasks with `#context` and `+project` for filtering
 - **Dependencies** — Define blocking relationships between tasks
+- **Google Calendar Sync** — Sync tasks to Google Calendar, view calendar events alongside tasks (premium plan)
 - **i18n** — English and Japanese UI
 
 ## Installation
@@ -43,6 +44,15 @@ This produces `main.js`, `styles.css`, and `manifest.json` for a GitHub Release.
 5. Use the timer button to start/stop time tracking, or start a Pomodoro session.
 6. Filter tasks by status, priority, context, or project. Sort by title, due date, priority, or urgency score.
 
+### Google Calendar Sync
+
+Requires a **premium plan** with Google Calendar scope.
+
+1. Open **Settings** and enable **Google Calendar Sync**.
+2. Tasks with a due date can be synced to Google Calendar individually from the task editor, or all at once with the calendar button in the toolbar.
+3. In the **Calendar** view, Google Calendar events are displayed in green alongside your tasks.
+4. Synced tasks show a link to open the event directly in Google Calendar.
+
 ### Task File Format
 
 Each task is a `.md` file with YAML frontmatter stored in the configured task folder:
@@ -60,6 +70,8 @@ timeEntries: []
 recurrence: null
 completeInstances: []
 dependencies: []
+calendarEventId: "abc123"
+calendarHtmlLink: "https://calendar.google.com/..."
 created: "2026-04-05T10:00:00Z"
 modified: "2026-04-05T10:00:00Z"
 ---
@@ -93,6 +105,7 @@ Japanese is also supported: `明日`, `来週月曜`, `毎週`, etc.
 | Pomodoro Duration | Work session length in minutes |
 | Pomodoro Break | Break length in minutes |
 | Default Calendar Layout | Month, week, or day |
+| Google Calendar Sync | Enable two-way sync with Google Calendar (premium) |
 
 ## Plugin API Usage
 
@@ -103,6 +116,7 @@ This plugin uses the following GemiHub Plugin APIs:
 - `api.registerCommand()` — registers commands (create task, open views)
 - `api.drive.listFiles/readFile/createFile/updateFile/deleteFile()` — CRUD operations for task Markdown files
 - `api.storage.get/set()` — persists plugin settings
+- `api.calendar.listEvents/createEvent/updateEvent/deleteEvent()` — Google Calendar sync (premium)
 
 ## Development
 

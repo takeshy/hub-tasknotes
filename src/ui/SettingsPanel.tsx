@@ -5,6 +5,7 @@
 import * as React from "react";
 import { TaskNotesSettings, TaskStatus, TaskPriority, ViewType, CalendarLayout, DEFAULT_SETTINGS, STATUS_ORDER } from "../types";
 import { t } from "../i18n";
+import { useStore } from "../store";
 
 interface SettingsPanelProps {
   api: {
@@ -18,6 +19,7 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ api, locale }: SettingsPanelProps) {
   const i = t(locale);
+  const { calendarAvailable } = useStore();
   const [settings, setSettings] = React.useState<TaskNotesSettings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = React.useState(false);
 
@@ -126,6 +128,25 @@ export function SettingsPanel({ api, locale }: SettingsPanelProps) {
           checked={settings.showCompleted}
           onChange={(e) => update("showCompleted", e.target.checked)}
         />
+      </label>
+
+      {/* Google Calendar sync */}
+      <label className="tn-field">
+        <span>{i.calendarSync}</span>
+        {calendarAvailable ? (
+          <div className="tn-toggle">
+            <input
+              type="checkbox"
+              checked={settings.calendarSync}
+              onChange={(e) => update("calendarSync", e.target.checked)}
+            />
+            <span className="tn-toggle-label">
+              {settings.calendarSync ? i.calendarSyncEnabled : i.calendarSyncDisabled}
+            </span>
+          </div>
+        ) : (
+          <span className="tn-hint">{i.calendarUnavailable}</span>
+        )}
       </label>
 
       <div className="tn-settings-actions">

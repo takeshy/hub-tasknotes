@@ -4,7 +4,7 @@
  */
 
 import * as React from "react";
-import { Task, TaskFilter, TaskSort, TaskNotesSettings, ViewType, DEFAULT_SETTINGS } from "./types";
+import { Task, TaskFilter, TaskSort, TaskNotesSettings, ViewType, CalendarEvent, DEFAULT_SETTINGS } from "./types";
 import { PomodoroState } from "./core/timeTracking";
 
 export interface StoreState {
@@ -30,6 +30,10 @@ export interface StoreState {
   timerTaskId: string | null;
   /** Task ID of the file currently open in the main editor */
   activeTaskId: string | null;
+  /** Whether Google Calendar API is available */
+  calendarAvailable: boolean;
+  /** Google Calendar events fetched from the API */
+  calendarEvents: CalendarEvent[];
 }
 
 type Listener = (state: StoreState) => void;
@@ -46,6 +50,8 @@ let state: StoreState = {
   pomodoro: null,
   timerTaskId: null,
   activeTaskId: null,
+  calendarAvailable: false,
+  calendarEvents: [],
 };
 const listeners = new Set<Listener>();
 

@@ -97,10 +97,23 @@ export interface Translations {
   pomodoroBreakDuration: string;
   calendarLayout: string;
   resetDefaults: string;
+  // Google Calendar
+  calendarSync: string;
+  calendarSyncEnabled: string;
+  calendarSyncDisabled: string;
+  calendarSyncTask: string;
+  calendarUnsyncTask: string;
+  calendarSyncing: string;
+  calendarSynced: string;
+  calendarEvent: string;
+  calendarOpenEvent: string;
+  calendarSyncAll: string;
+  calendarUnavailable: string;
   // Errors
   errorSave: string;
   errorLoad: string;
   errorDelete: string;
+  errorCalendarSync: string;
   // Empty states
   noTasks: string;
   noTasksFiltered: string;
@@ -216,10 +229,23 @@ const en: Translations = {
   pomodoroBreakDuration: "Pomodoro Break (min)",
   calendarLayout: "Default Calendar Layout",
   resetDefaults: "Reset to Defaults",
+  // Google Calendar
+  calendarSync: "Google Calendar Sync",
+  calendarSyncEnabled: "Calendar sync enabled",
+  calendarSyncDisabled: "Calendar sync disabled",
+  calendarSyncTask: "Sync to Calendar",
+  calendarUnsyncTask: "Remove from Calendar",
+  calendarSyncing: "Syncing...",
+  calendarSynced: "Synced",
+  calendarEvent: "Calendar Event",
+  calendarOpenEvent: "Open in Google Calendar",
+  calendarSyncAll: "Sync All Tasks",
+  calendarUnavailable: "Calendar unavailable (requires premium plan)",
   // Errors
   errorSave: "Failed to save task",
   errorLoad: "Failed to load tasks",
   errorDelete: "Failed to delete task",
+  errorCalendarSync: "Failed to sync with Google Calendar",
   // Empty states
   noTasks: "No tasks yet. Create your first task!",
   noTasksFiltered: "No tasks match the current filters.",
@@ -335,10 +361,23 @@ const ja: Translations = {
   pomodoroBreakDuration: "ポモドーロ休憩（分）",
   calendarLayout: "デフォルトカレンダー表示",
   resetDefaults: "デフォルトに戻す",
+  // Google Calendar
+  calendarSync: "Google Calendar 同期",
+  calendarSyncEnabled: "カレンダー同期が有効です",
+  calendarSyncDisabled: "カレンダー同期が無効です",
+  calendarSyncTask: "カレンダーに同期",
+  calendarUnsyncTask: "カレンダーから削除",
+  calendarSyncing: "同期中...",
+  calendarSynced: "同期済み",
+  calendarEvent: "カレンダー予定",
+  calendarOpenEvent: "Google Calendar で開く",
+  calendarSyncAll: "全タスクを同期",
+  calendarUnavailable: "カレンダーは利用できません（プレミアムプランが必要）",
   // Errors
   errorSave: "タスクの保存に失敗しました",
   errorLoad: "タスクの読み込みに失敗しました",
   errorDelete: "タスクの削除に失敗しました",
+  errorCalendarSync: "Google Calendar との同期に失敗しました",
   // Empty states
   noTasks: "タスクがありません。最初のタスクを作成しましょう！",
   noTasksFiltered: "条件に一致するタスクがありません。",

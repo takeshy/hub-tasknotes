@@ -14,6 +14,7 @@ import { TaskEditor } from "./TaskEditor";
 import { createTaskFromNaturalLanguage } from "../core/naturalLanguage";
 import { computeFormulas } from "../core/formulas";
 import { startTimer, stopTimer } from "../core/timeTracking";
+import { syncTaskToCalendar, unsyncTaskFromCalendar, fetchCalendarEvents, checkCalendarAvailable, CalendarAPI } from "../core/calendarSync";
 
 interface TaskPanelProps {
   api: {
@@ -25,6 +26,7 @@ interface TaskPanelProps {
       listFiles(folder?: string): Promise<Array<{ id: string; name: string }>>;
       deleteFile?(id: string): Promise<void>;
     };
+    calendar?: CalendarAPI;
     onActiveFileChanged(
       callback: (detail: { fileId: string | null; fileName: string | null; mimeType: string | null }) => void
     ): () => void;
@@ -52,7 +54,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     });
   }, [store.tasks]);
 
-  // Initialize service and load tasks
+  // Initialize service and load tasks; check calendar availability
   React.useEffect(() => {
     (async () => {
       const { TaskService } = await import("../core/taskService");
@@ -64,6 +66,12 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
         setState({ tasks, loading: false });
       } catch (e: any) {
         setState({ error: e.message || i.errorLoad, loading: false });
+      }
+
+      // Probe calendar API availability
+      if (api.calendar) {
+        const available = await checkCalendarAvailable(api.calendar);
+        setState({ calendarAvailable: available });
       }
     })();
   }, []);
@@ -146,6 +154,72 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     setState({ tasks: store.tasks.map((t) => (t.id === updated.id ? updated : t)), timerTaskId: null });
   };
 
+  // --- Calendar sync handlers ---
+  const handleSyncTask = async (taskId: string) => {
+    if (!serviceRef.current || !api.calendar) return;
+    const task = store.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    try {
+      const synced = await syncTaskToCalendar(api.calendar, task);
+      const updated = await serviceRef.current.update(synced);
+      const newTasks = store.tasks.map((t) => (t.id === updated.id ? updated : t));
+      setState({ tasks: newTasks });
+      // Re-open editor with updated task so calendarHtmlLink is visible
+      setEditorTask(updated);
+    } catch (e: any) {
+      setState({ error: e.message || i.errorCalendarSync });
+    }
+  };
+
+  const handleUnsyncTask = async (taskId: string) => {
+    if (!serviceRef.current || !api.calendar) return;
+    const task = store.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    try {
+      const unsynced = await unsyncTaskFromCalendar(api.calendar, task);
+      const updated = await serviceRef.current.update(unsynced);
+      const newTasks = store.tasks.map((t) => (t.id === updated.id ? updated : t));
+      setState({ tasks: newTasks });
+      // Re-open editor with updated task so sync state is reflected
+      setEditorTask(updated);
+    } catch (e: any) {
+      setState({ error: e.message || i.errorCalendarSync });
+    }
+  };
+
+  const handleSyncAllTasks = async () => {
+    if (!serviceRef.current || !api.calendar) return;
+    const tasksWithDue = store.tasks.filter(
+      (t) => t.due && t.status !== "cancelled"
+    );
+    let updatedTasks = [...store.tasks];
+    for (const task of tasksWithDue) {
+      try {
+        const synced = await syncTaskToCalendar(api.calendar, task);
+        const updated = await serviceRef.current.update(synced);
+        updatedTasks = updatedTasks.map((t) => (t.id === updated.id ? updated : t));
+      } catch {
+        // continue syncing remaining tasks
+      }
+    }
+    setState({ tasks: updatedTasks });
+  };
+
+  // Fetch Google Calendar events for the calendar view
+  const loadCalendarEvents = React.useCallback(async (startDate: Date, endDate: Date) => {
+    if (!api.calendar || !store.calendarAvailable) return;
+    try {
+      const events = await fetchCalendarEvents(
+        api.calendar,
+        startDate.toISOString(),
+        endDate.toISOString()
+      );
+      setState({ calendarEvents: events });
+    } catch {
+      // silently fail — calendar events are supplementary
+    }
+  }, [api.calendar, store.calendarAvailable]);
+
   const setView = (view: ViewType) => setState({ currentView: view });
   const toggleCompleted = () => setState({ filter: { ...store.filter, hideCompleted: !store.filter.hideCompleted } });
 
@@ -210,6 +284,11 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
           />
           <span className="tn-toggle-label">{i.showCompleted}</span>
         </label>
+        {store.calendarAvailable && store.settings.calendarSync && (
+          <button className="tn-btn tn-cal-sync-btn" onClick={handleSyncAllTasks} title={i.calendarSyncAll}>
+            &#x1F4C5;
+          </button>
+        )}
         <button className="tn-btn-primary" onClick={() => setEditorTask("new")}>+ {i.newTask}</button>
       </div>
 
@@ -251,6 +330,8 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
               layout={calendarLayout}
               onLayoutChange={setCalendarLayout}
               locale={locale}
+              calendarEvents={store.calendarAvailable && store.settings.calendarSync ? store.calendarEvents : []}
+              onDateRangeChange={store.calendarAvailable && store.settings.calendarSync ? loadCalendarEvents : undefined}
             />
           )}
           {store.currentView === "agenda" && (
@@ -272,12 +353,16 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
       {/* Editor modal */}
       {editorTask !== null && (
         <TaskEditor
+          key={editorTask === "new" ? "new" : `${editorTask.id}-${editorTask.calendarEventId || ""}`}
           task={editorTask === "new" ? null : editorTask}
           fileId={editorTask !== "new" && editorTask ? serviceRef.current?.getFileId(editorTask.id) : null}
           onSave={handleSaveTask}
           onCancel={() => setEditorTask(null)}
           onDelete={handleDelete}
           locale={locale}
+          calendarAvailable={store.calendarAvailable && store.settings.calendarSync}
+          onSyncCalendar={handleSyncTask}
+          onUnsyncCalendar={handleUnsyncTask}
         />
       )}
     </div>

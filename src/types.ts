@@ -70,6 +70,10 @@ export interface Task {
   created: string;
   /** Last modified date (ISO 8601) */
   modified: string;
+  /** Google Calendar event ID (if synced) */
+  calendarEventId?: string;
+  /** Google Calendar event HTML link */
+  calendarHtmlLink?: string;
 }
 
 /** Computed / formula properties for a task */
@@ -128,6 +132,8 @@ export interface TaskNotesSettings {
   pomodoroBreak: number;
   /** Default calendar layout */
   calendarLayout: CalendarLayout;
+  /** Enable Google Calendar sync */
+  calendarSync: boolean;
 }
 
 /** Default settings */
@@ -154,7 +160,20 @@ export const DEFAULT_SETTINGS: TaskNotesSettings = {
   pomodoroDuration: 25,
   pomodoroBreak: 5,
   calendarLayout: "month",
+  calendarSync: false,
 };
+
+/** Google Calendar event (from the Calendar API) */
+export interface CalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: string;
+  end: string;
+  location?: string;
+  status?: string;
+  htmlLink?: string;
+}
 
 /** Priority numeric values for sorting */
 export const PRIORITY_VALUES: Record<TaskPriority, number> = {

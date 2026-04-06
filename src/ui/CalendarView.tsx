@@ -3,7 +3,7 @@
  */
 
 import * as React from "react";
-import { Task, CalendarLayout } from "../types";
+import { Task, CalendarLayout, CalendarEvent } from "../types";
 import { t } from "../i18n";
 import { computeFormulas } from "../core/formulas";
 import { useStore } from "../store";
@@ -14,11 +14,32 @@ interface CalendarViewProps {
   layout: CalendarLayout;
   onLayoutChange: (layout: CalendarLayout) => void;
   locale?: string;
+  calendarEvents?: CalendarEvent[];
+  onDateRangeChange?: (start: Date, end: Date) => void;
 }
 
-export function CalendarView({ tasks, onSelect, layout, onLayoutChange, locale }: CalendarViewProps) {
+export function CalendarView({ tasks, onSelect, layout, onLayoutChange, locale, calendarEvents = [], onDateRangeChange }: CalendarViewProps) {
   const i = t(locale);
   const [currentDate, setCurrentDate] = React.useState(new Date());
+
+  // Compute visible date range and notify parent to fetch calendar events
+  React.useEffect(() => {
+    if (!onDateRangeChange) return;
+    const start = new Date(currentDate);
+    const end = new Date(currentDate);
+    if (layout === "month") {
+      start.setDate(1);
+      end.setMonth(end.getMonth() + 1, 0);
+    } else if (layout === "week") {
+      start.setDate(start.getDate() - start.getDay());
+      end.setTime(start.getTime());
+      end.setDate(end.getDate() + 6);
+    }
+    // Add a day buffer
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    onDateRangeChange(start, end);
+  }, [currentDate, layout, onDateRangeChange]);
 
   const navigate = (delta: number) => {
     const next = new Date(currentDate);
@@ -42,6 +63,23 @@ export function CalendarView({ tasks, onSelect, layout, onLayoutChange, locale }
     return map;
   }, [tasks]);
 
+  // Index calendar events by date (YYYY-MM-DD), excluding events already linked to a task
+  const eventsByDate = React.useMemo(() => {
+    const syncedEventIds = new Set(
+      tasks.map((t) => t.calendarEventId).filter(Boolean)
+    );
+    const map = new Map<string, CalendarEvent[]>();
+    for (const ev of calendarEvents) {
+      if (syncedEventIds.has(ev.id)) continue; // skip events already shown as tasks
+      // start can be ISO datetime or YYYY-MM-DD
+      const key = ev.start.slice(0, 10);
+      const arr = map.get(key) || [];
+      arr.push(ev);
+      map.set(key, arr);
+    }
+    return map;
+  }, [calendarEvents, tasks]);
+
   return (
     <div className="tn-calendar">
       <div className="tn-calendar-toolbar">
@@ -59,13 +97,13 @@ export function CalendarView({ tasks, onSelect, layout, onLayoutChange, locale }
       </div>
 
       {layout === "month" && (
-        <MonthGrid currentDate={currentDate} tasksByDate={tasksByDate} onSelect={onSelect} locale={locale} />
+        <MonthGrid currentDate={currentDate} tasksByDate={tasksByDate} eventsByDate={eventsByDate} onSelect={onSelect} locale={locale} />
       )}
       {layout === "week" && (
-        <WeekGrid currentDate={currentDate} tasksByDate={tasksByDate} onSelect={onSelect} locale={locale} />
+        <WeekGrid currentDate={currentDate} tasksByDate={tasksByDate} eventsByDate={eventsByDate} onSelect={onSelect} locale={locale} />
       )}
       {layout === "day" && (
-        <DayView currentDate={currentDate} tasksByDate={tasksByDate} onSelect={onSelect} locale={locale} />
+        <DayView currentDate={currentDate} tasksByDate={tasksByDate} eventsByDate={eventsByDate} onSelect={onSelect} locale={locale} />
       )}
     </div>
   );
@@ -74,11 +112,13 @@ export function CalendarView({ tasks, onSelect, layout, onLayoutChange, locale }
 function MonthGrid({
   currentDate,
   tasksByDate,
+  eventsByDate,
   onSelect,
   locale,
 }: {
   currentDate: Date;
   tasksByDate: Map<string, Task[]>;
+  eventsByDate: Map<string, CalendarEvent[]>;
   onSelect: (task: Task) => void;
   locale?: string;
 }) {
@@ -109,7 +149,9 @@ function MonthGrid({
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const dayTasks = tasksByDate.get(dateStr) || [];
+    const dayEvents = eventsByDate.get(dateStr) || [];
     const isToday = dateStr === todayStr;
+    const totalItems = dayTasks.length + dayEvents.length;
 
     cells.push(
       <div key={dateStr} className={`tn-cal-cell ${isToday ? "tn-cal-today" : ""}`}>
@@ -123,7 +165,17 @@ function MonthGrid({
             {task.title}
           </div>
         ))}
-        {dayTasks.length > 3 && <div className="tn-cal-more">+{dayTasks.length - 3}</div>}
+        {dayEvents.slice(0, Math.max(0, 3 - dayTasks.length)).map((ev) => (
+          <div
+            key={ev.id}
+            className="tn-cal-event"
+            onClick={() => ev.htmlLink && window.open(ev.htmlLink, "_blank")}
+            title={ev.summary}
+          >
+            {ev.summary}
+          </div>
+        ))}
+        {totalItems > 3 && <div className="tn-cal-more">+{totalItems - 3}</div>}
       </div>,
     );
   }
@@ -134,11 +186,13 @@ function MonthGrid({
 function WeekGrid({
   currentDate,
   tasksByDate,
+  eventsByDate,
   onSelect,
   locale,
 }: {
   currentDate: Date;
   tasksByDate: Map<string, Task[]>;
+  eventsByDate: Map<string, CalendarEvent[]>;
   onSelect: (task: Task) => void;
   locale?: string;
 }) {
@@ -153,6 +207,7 @@ function WeekGrid({
     d.setDate(d.getDate() + i);
     const dateStr = formatDateStr(d);
     const dayTasks = tasksByDate.get(dateStr) || [];
+    const dayEvents = eventsByDate.get(dateStr) || [];
     const isToday = dateStr === todayStr;
 
     days.push(
@@ -167,6 +222,11 @@ function WeekGrid({
               {task.title}
             </div>
           ))}
+          {dayEvents.map((ev) => (
+            <div key={ev.id} className="tn-cal-event" onClick={() => ev.htmlLink && window.open(ev.htmlLink, "_blank")} title={ev.summary}>
+              {ev.summary}
+            </div>
+          ))}
         </div>
       </div>,
     );
@@ -178,11 +238,13 @@ function WeekGrid({
 function DayView({
   currentDate,
   tasksByDate,
+  eventsByDate,
   onSelect,
   locale,
 }: {
   currentDate: Date;
   tasksByDate: Map<string, Task[]>;
+  eventsByDate: Map<string, CalendarEvent[]>;
   onSelect: (task: Task) => void;
   locale?: string;
 }) {
@@ -190,28 +252,42 @@ function DayView({
   const { activeTaskId } = useStore();
   const dateStr = formatDateStr(currentDate);
   const dayTasks = tasksByDate.get(dateStr) || [];
+  const dayEvents = eventsByDate.get(dateStr) || [];
+  const hasItems = dayTasks.length > 0 || dayEvents.length > 0;
 
   return (
     <div className="tn-cal-day-view">
       <div className="tn-cal-day-title">
         {currentDate.toLocaleDateString(locale || "en", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
       </div>
-      {dayTasks.length === 0 ? (
+      {!hasItems ? (
         <div className="tn-empty">{i.noTasksFiltered}</div>
       ) : (
-        dayTasks.map((task) => {
-          const formulas = computeFormulas(task);
-          return (
-            <div key={task.id} className={`tn-task-row tn-priority-${task.priority} ${task.id === activeTaskId ? "tn-active" : ""}`} onClick={() => onSelect(task)}>
-              <div className="tn-task-title">{task.title}</div>
-              {task.priority !== "none" && (
-                <span className={`tn-priority-badge tn-priority-${task.priority}`}>
-                  {i[`priority${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}` as keyof typeof i] as string}
-                </span>
-              )}
+        <>
+          {dayTasks.map((task) => {
+            const formulas = computeFormulas(task);
+            return (
+              <div key={task.id} className={`tn-task-row tn-priority-${task.priority} ${task.id === activeTaskId ? "tn-active" : ""}`} onClick={() => onSelect(task)}>
+                <div className="tn-task-title">{task.title}</div>
+                {task.priority !== "none" && (
+                  <span className={`tn-priority-badge tn-priority-${task.priority}`}>
+                    {i[`priority${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}` as keyof typeof i] as string}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+          {dayEvents.map((ev) => (
+            <div
+              key={ev.id}
+              className="tn-task-row tn-cal-event-row"
+              onClick={() => ev.htmlLink && window.open(ev.htmlLink, "_blank")}
+            >
+              <div className="tn-task-title">{ev.summary}</div>
+              <span className="tn-cal-event-badge">{i.calendarEvent}</span>
             </div>
-          );
-        })
+          ))}
+        </>
       )}
     </div>
   );

@@ -31,6 +31,46 @@ interface PluginAPI {
     readFile(id: string): Promise<string>;
     listFiles(folder?: string): Promise<Array<{ id: string; name: string }>>;
   };
+  calendar?: {
+    listEvents(options?: {
+      timeMin?: string;
+      timeMax?: string;
+      query?: string;
+      maxResults?: number;
+      calendarId?: string;
+    }): Promise<
+      Array<{
+        id: string;
+        summary: string;
+        description?: string;
+        start: string;
+        end: string;
+        location?: string;
+        status?: string;
+        htmlLink?: string;
+      }>
+    >;
+    createEvent(event: {
+      summary: string;
+      start: string;
+      end: string;
+      description?: string;
+      location?: string;
+      calendarId?: string;
+    }): Promise<{ eventId: string; htmlLink: string }>;
+    updateEvent(
+      eventId: string,
+      event: {
+        summary?: string;
+        start?: string;
+        end?: string;
+        description?: string;
+        location?: string;
+        calendarId?: string;
+      }
+    ): Promise<{ eventId: string; htmlLink: string }>;
+    deleteEvent(eventId: string, calendarId?: string): Promise<void>;
+  };
   onActiveFileChanged(
     callback: (detail: { fileId: string | null; fileName: string | null; mimeType: string | null }) => void
   ): () => void;
