@@ -1,0 +1,985 @@
+/* TaskNotes Plugin Styles (GemiHub) */
+
+/* ============================================
+   CSS Custom Properties (Light / Dark)
+   ============================================ */
+.tn-panel {
+  --tn-bg-primary: #ffffff;
+  --tn-bg-secondary: #f5f5f5;
+  --tn-bg-hover: #ebebeb;
+  --tn-text: #1a1a1a;
+  --tn-text-muted: #6b7280;
+  --tn-border: #e0e0e0;
+  --tn-accent: #4285f4;
+  --tn-accent-hover: rgba(66, 133, 244, 0.2);
+  --tn-danger: #dc2626;
+  --tn-danger-bg: rgba(220, 38, 38, 0.1);
+  --tn-success: #16a34a;
+
+  /* Priority colors */
+  --tn-priority-low: #4285f4;
+  --tn-priority-medium: #ca8a04;
+  --tn-priority-high: #ea580c;
+  --tn-priority-urgent: #dc2626;
+
+  /* Status colors */
+  --tn-status-todo: #6b7280;
+  --tn-status-in-progress: #4285f4;
+  --tn-status-done: #16a34a;
+  --tn-status-cancelled: #dc2626;
+}
+
+.dark .tn-panel,
+.tn-panel.dark {
+  --tn-bg-primary: #1e1e1e;
+  --tn-bg-secondary: #2a2a2a;
+  --tn-bg-hover: #333333;
+  --tn-text: #e0e0e0;
+  --tn-text-muted: #9ca3af;
+  --tn-border: #3a3a3a;
+  --tn-accent: #6ea8fe;
+  --tn-accent-hover: rgba(110, 168, 254, 0.2);
+  --tn-danger: #f87171;
+  --tn-danger-bg: rgba(248, 113, 113, 0.1);
+  --tn-success: #4ade80;
+
+  --tn-priority-low: #6ea8fe;
+  --tn-priority-medium: #fbbf24;
+  --tn-priority-high: #fb923c;
+  --tn-priority-urgent: #f87171;
+
+  --tn-status-todo: #9ca3af;
+  --tn-status-in-progress: #6ea8fe;
+  --tn-status-done: #4ade80;
+  --tn-status-cancelled: #f87171;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tn-panel:not(.light) {
+    --tn-bg-primary: #1e1e1e;
+    --tn-bg-secondary: #2a2a2a;
+    --tn-bg-hover: #333333;
+    --tn-text: #e0e0e0;
+    --tn-text-muted: #9ca3af;
+    --tn-border: #3a3a3a;
+    --tn-accent: #6ea8fe;
+    --tn-accent-hover: rgba(110, 168, 254, 0.2);
+    --tn-danger: #f87171;
+    --tn-danger-bg: rgba(248, 113, 113, 0.1);
+    --tn-success: #4ade80;
+
+    --tn-priority-low: #6ea8fe;
+    --tn-priority-medium: #fbbf24;
+    --tn-priority-high: #fb923c;
+    --tn-priority-urgent: #f87171;
+
+    --tn-status-todo: #9ca3af;
+    --tn-status-in-progress: #6ea8fe;
+    --tn-status-done: #4ade80;
+    --tn-status-cancelled: #f87171;
+  }
+}
+
+/* ============================================
+   Panel Layout
+   ============================================ */
+.tn-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 14px;
+  gap: 12px;
+  color: var(--tn-text);
+  background: var(--tn-bg-primary);
+}
+
+/* ============================================
+   Header
+   ============================================ */
+.tn-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tn-header h2 {
+  margin: 0;
+  font-size: 1.2em;
+  font-weight: 700;
+}
+
+.tn-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tn-task-count {
+  color: var(--tn-text-muted);
+  font-size: 0.85em;
+}
+
+.tn-expand-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ============================================
+   Expanded Overlay
+   ============================================ */
+.tn-expanded-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tn-panel-expanded {
+  width: 90vw;
+  max-width: 1200px;
+  height: 85vh;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.tn-panel-expanded .tn-kanban {
+  min-height: 400px;
+}
+
+.tn-panel-expanded .tn-kanban-column {
+  min-width: 240px;
+}
+
+.tn-panel-expanded .tn-cal-cell {
+  min-height: 100px;
+}
+
+/* ============================================
+   Quick Create
+   ============================================ */
+.tn-quick-create {
+  display: flex;
+  gap: 8px;
+}
+
+.tn-quick-input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--tn-border);
+  border-radius: 8px;
+  font-size: 1em;
+  background: var(--tn-bg-primary);
+  color: var(--tn-text);
+}
+
+.tn-quick-input:focus {
+  outline: none;
+  border-color: var(--tn-accent);
+  box-shadow: 0 0 0 2px var(--tn-accent-hover);
+}
+
+/* ============================================
+   View Tabs
+   ============================================ */
+.tn-view-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--tn-border);
+  padding-bottom: 8px;
+}
+
+.tn-tab {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: var(--tn-text-muted);
+  border-radius: 6px;
+}
+
+.tn-tab:hover {
+  background: var(--tn-bg-hover);
+  color: var(--tn-text);
+}
+
+.tn-tab-active {
+  color: var(--tn-accent);
+  font-weight: 600;
+  background: var(--tn-accent-hover);
+}
+
+/* ============================================
+   Toolbar
+   ============================================ */
+.tn-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tn-search {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--tn-border);
+  border-radius: 6px;
+  font-size: 0.9em;
+  background: var(--tn-bg-primary);
+  color: var(--tn-text);
+}
+
+.tn-search:focus {
+  outline: none;
+  border-color: var(--tn-accent);
+  box-shadow: 0 0 0 2px var(--tn-accent-hover);
+}
+
+/* ============================================
+   Toggle
+   ============================================ */
+.tn-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+  color: var(--tn-text-muted);
+  white-space: nowrap;
+}
+
+.tn-toggle input[type="checkbox"] {
+  width: 32px;
+  height: 18px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--tn-border);
+  border-radius: 9px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.tn-toggle input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.tn-toggle input[type="checkbox"]:checked {
+  background: var(--tn-accent);
+}
+
+.tn-toggle input[type="checkbox"]:checked::after {
+  transform: translateX(14px);
+}
+
+/* ============================================
+   Buttons
+   ============================================ */
+.tn-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--tn-border);
+  background: var(--tn-bg-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+  color: var(--tn-text);
+  white-space: nowrap;
+}
+
+.tn-btn:hover {
+  background: var(--tn-bg-hover);
+}
+
+.tn-btn-primary {
+  padding: 6px 12px;
+  border: none;
+  background: var(--tn-accent);
+  color: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tn-btn-primary:hover {
+  opacity: 0.9;
+}
+
+.tn-btn-danger {
+  padding: 6px 12px;
+  border: none;
+  background: var(--tn-danger);
+  color: #ffffff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.tn-btn-danger:hover {
+  opacity: 0.9;
+}
+
+/* ============================================
+   Task List
+   ============================================ */
+.tn-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tn-task-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.tn-task-row:hover {
+  background: var(--tn-bg-hover);
+}
+
+.tn-task-row.tn-active,
+.tn-kanban-card.tn-active,
+.tn-cal-task.tn-active {
+  background: var(--tn-accent-hover);
+  box-shadow: inset 3px 0 0 var(--tn-accent);
+}
+
+.tn-task-row.tn-done {
+  opacity: 0.5;
+}
+
+.tn-task-row.tn-overdue {
+  border-left: 3px solid var(--tn-danger);
+}
+
+.tn-checkbox {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 2px solid var(--tn-border);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--tn-success);
+  padding: 0;
+}
+
+.tn-checkbox.tn-checked {
+  background: var(--tn-success);
+  border-color: var(--tn-success);
+  color: #ffffff;
+}
+
+.tn-task-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.tn-task-title {
+  font-size: 0.95em;
+  font-weight: 500;
+  color: var(--tn-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tn-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 0.8em;
+  color: var(--tn-text-muted);
+}
+
+.tn-due {
+  color: var(--tn-text-muted);
+}
+
+.tn-overdue-text {
+  color: var(--tn-danger);
+  font-weight: 600;
+}
+
+/* ============================================
+   Priority Badges
+   ============================================ */
+.tn-priority-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.75em;
+  font-weight: 600;
+}
+
+.tn-priority-badge.tn-priority-low {
+  background: rgba(66, 133, 244, 0.15);
+  color: var(--tn-priority-low);
+}
+
+.tn-priority-badge.tn-priority-medium {
+  background: rgba(202, 138, 4, 0.15);
+  color: var(--tn-priority-medium);
+}
+
+.tn-priority-badge.tn-priority-high {
+  background: rgba(234, 88, 12, 0.15);
+  color: var(--tn-priority-high);
+}
+
+.tn-priority-badge.tn-priority-urgent {
+  background: rgba(220, 38, 38, 0.15);
+  color: var(--tn-priority-urgent);
+}
+
+/* ============================================
+   Tags
+   ============================================ */
+.tn-context-tag {
+  color: var(--tn-accent);
+  font-size: 0.8em;
+}
+
+.tn-project-tag {
+  color: #a78bfa;
+  font-size: 0.8em;
+}
+
+.tn-recurrence-badge {
+  color: var(--tn-text-muted);
+  font-size: 0.75em;
+  font-style: italic;
+}
+
+.tn-time-tracked {
+  color: var(--tn-text-muted);
+  font-size: 0.75em;
+}
+
+/* ============================================
+   Timer Button
+   ============================================ */
+.tn-timer-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border: 1px solid var(--tn-border);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--tn-text-muted);
+}
+
+.tn-timer-btn:hover {
+  background: var(--tn-bg-hover);
+}
+
+.tn-timer-btn.tn-timer-running {
+  color: var(--tn-danger);
+  border-color: var(--tn-danger);
+  animation: tn-pulse 1.5s infinite;
+}
+
+@keyframes tn-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================
+   Kanban
+   ============================================ */
+.tn-kanban {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  min-height: 300px;
+}
+
+.tn-kanban-column {
+  flex: 1;
+  min-width: 200px;
+  background: var(--tn-bg-secondary);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tn-kanban-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  font-weight: 600;
+  font-size: 0.9em;
+  color: var(--tn-text);
+}
+
+.tn-kanban-count {
+  background: var(--tn-bg-hover);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.8em;
+  font-weight: normal;
+  color: var(--tn-text-muted);
+}
+
+.tn-kanban-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.tn-kanban-card {
+  background: var(--tn-bg-primary);
+  border: 1px solid var(--tn-border);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: grab;
+  transition: box-shadow 0.15s;
+}
+
+.tn-kanban-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.tn-kanban-card.tn-overdue {
+  border-left: 3px solid var(--tn-danger);
+}
+
+.tn-kanban-card-title {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: var(--tn-text);
+  margin-bottom: 4px;
+}
+
+.tn-kanban-card-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 0.75em;
+  color: var(--tn-text-muted);
+}
+
+.tn-kanban-card-tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* ============================================
+   Calendar
+   ============================================ */
+.tn-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tn-calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tn-calendar-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.tn-calendar-current {
+  font-weight: 600;
+  font-size: 1em;
+  color: var(--tn-text);
+}
+
+.tn-calendar-layout-switch {
+  display: flex;
+  gap: 4px;
+}
+
+.tn-cal-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--tn-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tn-cal-header {
+  background: var(--tn-bg-secondary);
+  padding: 6px;
+  text-align: center;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--tn-text-muted);
+}
+
+.tn-cal-cell {
+  background: var(--tn-bg-primary);
+  padding: 4px;
+  min-height: 70px;
+}
+
+.tn-cal-empty {
+  background: var(--tn-bg-secondary);
+}
+
+.tn-cal-today {
+  background: var(--tn-accent-hover);
+}
+
+.tn-cal-day-num {
+  font-size: 0.8em;
+  font-weight: 500;
+  color: var(--tn-text-muted);
+  margin-bottom: 2px;
+}
+
+.tn-cal-task {
+  font-size: 0.75em;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--tn-accent-hover);
+  color: var(--tn-text);
+}
+
+.tn-cal-task.tn-priority-high,
+.tn-cal-task.tn-priority-urgent {
+  background: var(--tn-danger-bg);
+  color: var(--tn-danger);
+}
+
+.tn-cal-more {
+  font-size: 0.7em;
+  color: var(--tn-text-muted);
+  padding: 2px 4px;
+}
+
+/* Week grid */
+.tn-cal-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.tn-week-day {
+  background: var(--tn-bg-secondary);
+  border-radius: 8px;
+  padding: 8px;
+  min-height: 150px;
+}
+
+.tn-week-day-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.tn-week-day-name {
+  font-weight: 600;
+  color: var(--tn-text);
+}
+
+.tn-week-day-num {
+  color: var(--tn-text-muted);
+}
+
+.tn-week-day-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Day view */
+.tn-cal-day-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tn-cal-day-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--tn-text);
+}
+
+/* ============================================
+   Agenda
+   ============================================ */
+.tn-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tn-agenda-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tn-agenda-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.95em;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--tn-border);
+  color: var(--tn-text);
+}
+
+.tn-agenda-overdue .tn-agenda-group-header {
+  color: var(--tn-danger);
+}
+
+.tn-agenda-today .tn-agenda-group-header {
+  color: var(--tn-accent);
+}
+
+.tn-agenda-group-count {
+  font-weight: normal;
+  font-size: 0.8em;
+  color: var(--tn-text-muted);
+  background: var(--tn-bg-secondary);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* ============================================
+   Editor Overlay
+   ============================================ */
+.tn-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.tn-editor {
+  background: var(--tn-bg-primary);
+  border: 1px solid var(--tn-border);
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 520px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tn-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tn-editor h3 {
+  margin: 0;
+  font-size: 1.15em;
+  color: var(--tn-text);
+}
+
+.tn-open-note-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--tn-border);
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--tn-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tn-open-note-btn:hover {
+  background: var(--tn-bg-hover);
+  color: var(--tn-accent);
+}
+
+/* ============================================
+   Form Fields
+   ============================================ */
+.tn-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tn-field > span:first-child {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--tn-text-muted);
+}
+
+.tn-field input[type="text"],
+.tn-field input[type="date"],
+.tn-field input[type="number"],
+.tn-field select,
+.tn-field textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--tn-border);
+  border-radius: 6px;
+  font-size: 1em;
+  background: var(--tn-bg-primary);
+  color: var(--tn-text);
+}
+
+.tn-field input:focus,
+.tn-field select:focus,
+.tn-field textarea:focus {
+  outline: none;
+  border-color: var(--tn-accent);
+  box-shadow: 0 0 0 2px var(--tn-accent-hover);
+}
+
+.tn-field textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.tn-field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.tn-field-row .tn-field {
+  flex: 1;
+}
+
+.tn-hint {
+  font-size: 0.75em;
+  color: var(--tn-text-muted);
+}
+
+.tn-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* ============================================
+   Settings
+   ============================================ */
+.tn-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px;
+  color: var(--tn-text);
+}
+
+.tn-settings h3 {
+  margin: 0;
+}
+
+.tn-settings-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* ============================================
+   Utility
+   ============================================ */
+.tn-empty {
+  text-align: center;
+  color: var(--tn-text-muted);
+  padding: 32px 16px;
+  font-size: 0.95em;
+}
+
+.tn-error {
+  background: var(--tn-danger-bg);
+  color: var(--tn-danger);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.tn-loading {
+  text-align: center;
+  color: var(--tn-text-muted);
+  padding: 24px;
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
+.tn-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tn-panel::-webkit-scrollbar-track {
+  background: var(--tn-bg-secondary);
+  border-radius: 4px;
+}
+
+.tn-panel::-webkit-scrollbar-thumb {
+  background: var(--tn-border);
+  border-radius: 4px;
+}
+
+.tn-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--tn-text-muted);
+}
