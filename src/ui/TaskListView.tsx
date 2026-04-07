@@ -17,15 +17,13 @@ interface TaskListViewProps {
   onSkip: (taskId: string) => void;
   onStartTimer: (taskId: string) => void;
   onStopTimer: (taskId: string) => void;
-  locale?: string;
 }
 
-export function TaskListView({ tasks, onSelect, onComplete, onSkip, onStartTimer, onStopTimer, locale }: TaskListViewProps) {
-  const i = t(locale);
+export function TaskListView({ tasks, onSelect, onComplete, onSkip, onStartTimer, onStopTimer }: TaskListViewProps) {
   const { activeTaskId } = useStore();
 
   if (tasks.length === 0) {
-    return <div className="tn-empty">{i.noTasksFiltered}</div>;
+    return <div className="tn-empty">{t("noTasks.filtered")}</div>;
   }
 
   return (
@@ -43,7 +41,6 @@ export function TaskListView({ tasks, onSelect, onComplete, onSkip, onStartTimer
             onSkip={onSkip}
             onStartTimer={onStartTimer}
             onStopTimer={onStopTimer}
-            locale={locale}
           />
         );
       })}
@@ -60,11 +57,9 @@ interface TaskRowProps {
   onSkip: (taskId: string) => void;
   onStartTimer: (taskId: string) => void;
   onStopTimer: (taskId: string) => void;
-  locale?: string;
 }
 
-function TaskRow({ task, formulas, active, onSelect, onComplete, onSkip, onStartTimer, onStopTimer, locale }: TaskRowProps) {
-  const i = t(locale);
+function TaskRow({ task, formulas, active, onSelect, onComplete, onSkip, onStartTimer, onStopTimer }: TaskRowProps) {
   const isDone = task.status === "done" || task.status === "cancelled";
   const running = hasRunningTimer(task);
 
@@ -73,7 +68,7 @@ function TaskRow({ task, formulas, active, onSelect, onComplete, onSkip, onStart
       <button
         className={`tn-checkbox ${isDone ? "tn-checked" : ""}`}
         onClick={() => onComplete(task.id)}
-        title={isDone ? i.statusDone : i.statusTodo}
+        title={isDone ? t("status.done") : t("status.todo")}
       >
         {isDone ? "\u2713" : ""}
       </button>
@@ -83,18 +78,18 @@ function TaskRow({ task, formulas, active, onSelect, onComplete, onSkip, onStart
         <div className="tn-task-meta">
           {task.due && (
             <span className={`tn-due ${formulas.isOverdue ? "tn-overdue-text" : ""}`}>
-              {formulas.isOverdue ? i.overdue : ""} {task.due}
-              {formulas.daysUntilDue !== null && !formulas.isOverdue && ` (${formulas.daysUntilDue}${i.days})`}
+              {formulas.isOverdue ? t("overdue") : ""} {task.due}
+              {formulas.daysUntilDue !== null && !formulas.isOverdue && ` (${formulas.daysUntilDue}${t("days")})`}
             </span>
           )}
           {task.scheduled && (
             <span className="tn-scheduled">
-              {i.scheduled}: {task.scheduled.includes("T") ? task.scheduled.replace("T", " ") : task.scheduled}
+              {t("scheduled")}: {task.scheduled.includes("T") ? task.scheduled.replace("T", " ") : task.scheduled}
             </span>
           )}
           {task.priority !== "none" && (
             <span className={`tn-priority-badge tn-priority-${task.priority}`}>
-              {i[`priority${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}` as keyof typeof i] as string}
+              {t(`priority.${task.priority}`)}
             </span>
           )}
           {task.contexts.map((c) => (
@@ -107,13 +102,13 @@ function TaskRow({ task, formulas, active, onSelect, onComplete, onSkip, onStart
             <span key={p} className="tn-project-tag">+{p}</span>
           ))}
           {task.recurrence && (
-            <span className="tn-recurrence-badge">{describeRRule(task.recurrence.rrule, locale)}</span>
+            <span className="tn-recurrence-badge">{describeRRule(task.recurrence.rrule)}</span>
           )}
           {task.archived && (
-            <span className="tn-archived-badge">{i.archived}</span>
+            <span className="tn-archived-badge">{t("archived")}</span>
           )}
           {task.blockedBy.length > 0 && (
-            <span className="tn-blocked-badge">{i.blockedBy}: {task.blockedBy.length}</span>
+            <span className="tn-blocked-badge">{t("blockedBy")}: {task.blockedBy.length}</span>
           )}
           {formulas.totalTrackedTime > 0 && (
             <span className="tn-time-tracked">{formatMinutes(formulas.totalTrackedTime)}</span>
@@ -125,7 +120,7 @@ function TaskRow({ task, formulas, active, onSelect, onComplete, onSkip, onStart
         <button
           className="tn-skip-btn"
           onClick={() => onSkip(task.id)}
-          title={i.skipInstance}
+          title={t("skipInstance")}
         >
           &#x23ED;
         </button>
@@ -134,7 +129,7 @@ function TaskRow({ task, formulas, active, onSelect, onComplete, onSkip, onStart
       <button
         className={`tn-timer-btn ${running ? "tn-timer-running" : ""}`}
         onClick={() => (running ? onStopTimer(task.id) : onStartTimer(task.id))}
-        title={running ? i.stopTimer : i.startTimer}
+        title={running ? t("stopTimer") : t("startTimer")}
       >
         {running ? "\u25A0" : "\u25B6"}
       </button>

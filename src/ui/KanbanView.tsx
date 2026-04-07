@@ -12,11 +12,9 @@ interface KanbanViewProps {
   tasks: Task[];
   onSelect: (task: Task) => void;
   onStatusChange: (taskId: string, newStatus: TaskStatus) => void;
-  locale?: string;
 }
 
-export function KanbanView({ tasks, onSelect, onStatusChange, locale }: KanbanViewProps) {
-  const i = t(locale);
+export function KanbanView({ tasks, onSelect, onStatusChange }: KanbanViewProps) {
   const { activeTaskId } = useStore();
 
   const columns: Record<TaskStatus, Task[]> = {
@@ -31,10 +29,10 @@ export function KanbanView({ tasks, onSelect, onStatusChange, locale }: KanbanVi
   }
 
   const statusLabels: Record<TaskStatus, string> = {
-    todo: i.statusTodo,
-    in_progress: i.statusInProgress,
-    done: i.statusDone,
-    cancelled: i.statusCancelled,
+    todo: t("status.todo"),
+    in_progress: t("status.in_progress"),
+    done: t("status.done"),
+    cancelled: t("status.cancelled"),
   };
 
   const [dragTaskId, setDragTaskId] = React.useState<string | null>(null);
@@ -79,7 +77,7 @@ export function KanbanView({ tasks, onSelect, onStatusChange, locale }: KanbanVi
                     {task.due && <span className={formulas.isOverdue ? "tn-overdue-text" : ""}>{task.due}</span>}
                     {task.priority !== "none" && (
                       <span className={`tn-priority-badge tn-priority-${task.priority}`}>
-                        {i[`priority${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}` as keyof typeof i] as string}
+                        {t(`priority.${task.priority}`)}
                       </span>
                     )}
                   </div>

@@ -132,6 +132,38 @@ export class TaskService {
     return this.update(task);
   }
 
+  /** Re-read a task from drive by file ID and update the cache */
+  async reload(fileId: string): Promise<Task | null> {
+    // Find task ID by fileId
+    let taskId: string | null = null;
+    for (const [id, entry] of this.cache) {
+      if (entry.fileId === fileId) { taskId = id; break; }
+    }
+    if (!taskId) return null;
+    try {
+      const content = await this.drive.readFile(fileId);
+      const task = parseTask(taskId, content);
+      this.cache.set(taskId, { task, fileId });
+      return task;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Re-read a task from drive by task ID and update the cache */
+  async reloadById(taskId: string): Promise<Task | null> {
+    const cached = this.cache.get(taskId);
+    if (!cached) return null;
+    try {
+      const content = await this.drive.readFile(cached.fileId);
+      const task = parseTask(taskId, content);
+      this.cache.set(taskId, { task, fileId: cached.fileId });
+      return task;
+    } catch {
+      return null;
+    }
+  }
+
   /** Get a task by ID */
   get(taskId: string): Task | null {
     return this.cache.get(taskId)?.task ?? null;

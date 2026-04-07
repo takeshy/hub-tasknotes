@@ -4,8 +4,8 @@
 
 import * as React from "react";
 import { TaskNotesSettings, TaskStatus, TaskPriority, ViewType, CalendarLayout, DEFAULT_SETTINGS, STATUS_ORDER } from "../types";
-import { t } from "../i18n";
-import { useStore } from "../store";
+import { t, setLanguage } from "../i18n";
+
 
 interface SettingsPanelProps {
   api: {
@@ -14,12 +14,11 @@ interface SettingsPanelProps {
       set(key: string, value: unknown): Promise<void>;
     };
   };
-  locale?: string;
+  language?: string;
 }
 
-export function SettingsPanel({ api, locale }: SettingsPanelProps) {
-  const i = t(locale);
-  const { calendarAvailable } = useStore();
+export function SettingsPanel({ api, language }: SettingsPanelProps) {
+  React.useEffect(() => { if (language) setLanguage(language); }, [language]);
   const [settings, setSettings] = React.useState<TaskNotesSettings>(DEFAULT_SETTINGS);
   const [saved, setSaved] = React.useState(false);
 
@@ -46,61 +45,61 @@ export function SettingsPanel({ api, locale }: SettingsPanelProps) {
 
   return (
     <div className="tn-settings">
-      <h3>{i.settingsTitle}</h3>
+      <h3>{t("settings.title")}</h3>
 
       <label className="tn-field">
-        <span>{i.taskFolder}</span>
+        <span>{t("settings.taskFolder")}</span>
         <input
           type="text"
           value={settings.taskFolder}
           onChange={(e) => update("taskFolder", e.target.value)}
         />
-        <span className="tn-hint">{i.taskFolderHint}</span>
+        <span className="tn-hint">{t("settings.taskFolderHint")}</span>
       </label>
 
       <label className="tn-field">
-        <span>{i.defaultView}</span>
+        <span>{t("settings.defaultView")}</span>
         <select value={settings.defaultView} onChange={(e) => update("defaultView", e.target.value as ViewType)}>
-          <option value="list">{i.taskList}</option>
-          <option value="kanban">{i.kanban}</option>
-          <option value="calendar">{i.calendar}</option>
-          <option value="agenda">{i.agenda}</option>
+          <option value="list">{t("view.list")}</option>
+          <option value="kanban">{t("view.kanban")}</option>
+          <option value="calendar">{t("view.calendar")}</option>
+          <option value="agenda">{t("view.agenda")}</option>
         </select>
       </label>
 
       <label className="tn-field">
-        <span>{i.defaultStatus}</span>
+        <span>{t("settings.defaultStatus")}</span>
         <select value={settings.defaultStatus} onChange={(e) => update("defaultStatus", e.target.value as TaskStatus)}>
           {STATUS_ORDER.map((s) => (
             <option key={s} value={s}>
-              {i[`status${s.charAt(0).toUpperCase() + s.slice(1).replace(/_./g, (m) => m[1].toUpperCase())}` as keyof typeof i] as string}
+              {t(`status.${s}`)}
             </option>
           ))}
         </select>
       </label>
 
       <label className="tn-field">
-        <span>{i.defaultPriority}</span>
+        <span>{t("settings.defaultPriority")}</span>
         <select value={settings.defaultPriority} onChange={(e) => update("defaultPriority", e.target.value as TaskPriority)}>
           {(["none", "low", "medium", "high", "urgent"] as TaskPriority[]).map((p) => (
             <option key={p} value={p}>
-              {i[`priority${p.charAt(0).toUpperCase() + p.slice(1)}` as keyof typeof i] as string}
+              {t(`priority.${p}`)}
             </option>
           ))}
         </select>
       </label>
 
       <label className="tn-field">
-        <span>{i.calendarLayout}</span>
+        <span>{t("settings.calendarLayout")}</span>
         <select value={settings.calendarLayout} onChange={(e) => update("calendarLayout", e.target.value as CalendarLayout)}>
-          <option value="month">{i.calendarMonth}</option>
-          <option value="week">{i.calendarWeek}</option>
-          <option value="day">{i.calendarDay}</option>
+          <option value="month">{t("calendar.month")}</option>
+          <option value="week">{t("calendar.week")}</option>
+          <option value="day">{t("calendar.day")}</option>
         </select>
       </label>
 
       <label className="tn-field">
-        <span>{i.showCompleted}</span>
+        <span>{t("showCompleted")}</span>
         <input
           type="checkbox"
           checked={settings.showCompleted}
@@ -108,32 +107,13 @@ export function SettingsPanel({ api, locale }: SettingsPanelProps) {
         />
       </label>
 
-      {/* Google Calendar sync */}
-      <label className="tn-field">
-        <span>{i.calendarSync}</span>
-        {calendarAvailable ? (
-          <div className="tn-toggle">
-            <input
-              type="checkbox"
-              checked={settings.calendarSync}
-              onChange={(e) => update("calendarSync", e.target.checked)}
-            />
-            <span className="tn-toggle-label">
-              {settings.calendarSync ? i.calendarSyncEnabled : i.calendarSyncDisabled}
-            </span>
-          </div>
-        ) : (
-          <span className="tn-hint">{i.calendarUnavailable}</span>
-        )}
-      </label>
-
       <div className="tn-settings-actions">
         <button className="tn-btn-primary" onClick={handleSave}>
-          {i.save}
+          {t("save")}
           {saved && " \u2713"}
         </button>
         <button className="tn-btn" onClick={handleReset}>
-          {i.resetDefaults}
+          {t("settings.resetDefaults")}
         </button>
       </div>
     </div>

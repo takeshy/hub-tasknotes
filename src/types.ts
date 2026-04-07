@@ -134,8 +134,6 @@ export interface TaskNotesSettings {
   showCompleted: boolean;
   /** Default calendar layout */
   calendarLayout: CalendarLayout;
-  /** Enable Google Calendar sync */
-  calendarSync: boolean;
 }
 
 /** Default settings */
@@ -160,7 +158,6 @@ export const DEFAULT_SETTINGS: TaskNotesSettings = {
   dateFormat: "YYYY-MM-DD",
   showCompleted: false,
   calendarLayout: "month",
-  calendarSync: false,
 };
 
 /** Google Calendar event (from the Calendar API) */

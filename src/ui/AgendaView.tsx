@@ -13,7 +13,6 @@ interface AgendaViewProps {
   onSelect: (task: Task) => void;
   onComplete: (taskId: string) => void;
   onSkip: (taskId: string) => void;
-  locale?: string;
 }
 
 interface AgendaGroup {
@@ -22,8 +21,7 @@ interface AgendaGroup {
   className: string;
 }
 
-export function AgendaView({ tasks, onSelect, onComplete, onSkip, locale }: AgendaViewProps) {
-  const i = t(locale);
+export function AgendaView({ tasks, onSelect, onComplete, onSkip }: AgendaViewProps) {
   const { activeTaskId } = useStore();
 
   const groups = React.useMemo((): AgendaGroup[] => {
@@ -61,15 +59,15 @@ export function AgendaView({ tasks, onSelect, onComplete, onSkip, locale }: Agen
     upcoming.sort(sortTasks);
 
     return [
-      { label: i.agendaOverdue, tasks: overdue, className: "tn-agenda-overdue" },
-      { label: i.agendaToday, tasks: today, className: "tn-agenda-today" },
-      { label: i.agendaUpcoming, tasks: upcoming, className: "tn-agenda-upcoming" },
-      { label: i.agendaNoDue, tasks: noDue, className: "tn-agenda-nodue" },
+      { label: t("agenda.overdue"), tasks: overdue, className: "tn-agenda-overdue" },
+      { label: t("agenda.today"), tasks: today, className: "tn-agenda-today" },
+      { label: t("agenda.upcoming"), tasks: upcoming, className: "tn-agenda-upcoming" },
+      { label: t("agenda.noDue"), tasks: noDue, className: "tn-agenda-nodue" },
     ].filter((g) => g.tasks.length > 0);
-  }, [tasks, locale]);
+  }, [tasks]);
 
   if (groups.length === 0) {
-    return <div className="tn-empty">{i.noTasksFiltered}</div>;
+    return <div className="tn-empty">{t("noTasks.filtered")}</div>;
   }
 
   return (
@@ -102,7 +100,7 @@ export function AgendaView({ tasks, onSelect, onComplete, onSkip, locale }: Agen
                       e.stopPropagation();
                       onSkip(task.id);
                     }}
-                    title={i.skipInstance}
+                    title={t("skipInstance")}
                   >
                     &#x23ED;
                   </button>
@@ -113,7 +111,7 @@ export function AgendaView({ tasks, onSelect, onComplete, onSkip, locale }: Agen
                     {task.due && <span className="tn-due">{task.due}</span>}
                     {task.priority !== "none" && (
                       <span className={`tn-priority-badge tn-priority-${task.priority}`}>
-                        {i[`priority${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}` as keyof typeof i] as string}
+                        {t(`priority.${task.priority}`)}
                       </span>
                     )}
                     {task.contexts.map((c) => (

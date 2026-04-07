@@ -4,8 +4,8 @@
 
 import * as React from "react";
 import { Task, ViewType, TaskStatus, TaskPriority, CalendarLayout, STATUS_ORDER } from "../types";
-import { t } from "../i18n";
-import { useStore, setState } from "../store";
+import { t, setLanguage } from "../i18n";
+import { useStore, setState, getState } from "../store";
 import { TaskListView } from "./TaskListView";
 import { KanbanView } from "./KanbanView";
 import { CalendarView } from "./CalendarView";
@@ -57,11 +57,11 @@ interface TaskPanelProps {
       callback: (detail: { fileId: string | null; fileName: string | null; mimeType: string | null }) => void
     ): () => void;
   };
-  locale?: string;
+  language?: string;
 }
 
-export function TaskPanel({ api, locale }: TaskPanelProps) {
-  const i = t(locale);
+export function TaskPanel({ api, language }: TaskPanelProps) {
+  React.useEffect(() => { if (language) setLanguage(language); }, [language]);
   const store = useStore();
   const [editorTask, setEditorTask] = React.useState<Task | null | "new">(null);
   const [calendarLayout, setCalendarLayout] = React.useState<CalendarLayout>(store.settings.calendarLayout);
@@ -72,11 +72,17 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
   const serviceRef = React.useRef<import("../core/taskService").TaskService | null>(null);
   const aiModelRef = React.useRef<string | null>(null);
 
-  // Track which task file is open in the main editor
+  // Track which task file is open in the main editor and sync changes
   React.useEffect(() => {
-    return api.onActiveFileChanged(({ fileId }) => {
+    return api.onActiveFileChanged(async ({ fileId }) => {
       if (fileId && serviceRef.current) {
-        setState({ activeTaskId: serviceRef.current.getTaskIdByFileId(fileId) });
+        const taskId = serviceRef.current.getTaskIdByFileId(fileId);
+        setState({ activeTaskId: taskId });
+        // Re-read the file to pick up edits made in the main editor
+        const reloaded = await serviceRef.current.reload(fileId);
+        if (reloaded) {
+          setState({ tasks: getState().tasks.map((t) => (t.id === reloaded.id ? reloaded : t)) });
+        }
       } else {
         setState({ activeTaskId: null });
       }
@@ -94,13 +100,19 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
         const tasks = await service.loadAll();
         setState({ tasks, loading: false });
       } catch (e: any) {
-        setState({ error: e.message || i.errorLoad, loading: false });
+        setState({ error: e.message || t("error.load"), loading: false });
       }
 
-      // Probe calendar API availability
+      // Probe calendar API availability and load cached events
       if (api.calendar) {
         const available = await checkCalendarAvailable(api.calendar);
         setState({ calendarAvailable: available });
+        if (available) {
+          const cached = await api.storage.get("cachedCalendarEvents") as import("../types").CalendarEvent[] | null;
+          if (cached && Array.isArray(cached)) {
+            setState({ calendarEvents: cached });
+          }
+        }
       }
     })();
   }, []);
@@ -172,7 +184,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
       setAiInput("");
       setEditorTask(task);
     } catch (e: any) {
-      setState({ error: e.message || i.errorAIParse });
+      setState({ error: e.message || t("error.aiParse") });
     } finally {
       setAiLoading(false);
     }
@@ -182,7 +194,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     if (!serviceRef.current) return;
     try {
       const updated = await serviceRef.current.update(task);
-      setState({ tasks: store.tasks.map((t) => (t.id === updated.id ? updated : t)) });
+      setState({ tasks: getState().tasks.map((t) => (t.id === updated.id ? updated : t)) });
     } catch {
       // save failed, still open the note
     }
@@ -197,17 +209,28 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     if (!serviceRef.current) return;
     const isNew = editorTask === "new" || (typeof editorTask === "object" && editorTask !== null && !editorTask.id);
     try {
+      let saved: Task;
       if (isNew) {
         const id = `task-${Date.now().toString(36)}`;
-        const created = await serviceRef.current.create({ ...task, id });
-        setState({ tasks: [...store.tasks, created] });
+        saved = await serviceRef.current.create({ ...task, id });
+        setState({ tasks: [...getState().tasks, saved] });
       } else {
-        const updated = await serviceRef.current.update(task);
-        setState({ tasks: store.tasks.map((t) => (t.id === updated.id ? updated : t)) });
+        saved = await serviceRef.current.update(task);
+        setState({ tasks: getState().tasks.map((t) => (t.id === saved.id ? saved : t)) });
+      }
+      // Auto-sync to Google Calendar if the task has a date
+      if ((saved.due || saved.scheduled) && api.calendar && getState().calendarAvailable) {
+        try {
+          const synced = await syncTaskToCalendar(api.calendar, saved);
+          const updated = await serviceRef.current.update(synced);
+          setState({ tasks: getState().tasks.map((t) => (t.id === updated.id ? updated : t)) });
+        } catch {
+          // calendar sync failure is non-fatal
+        }
       }
       setEditorTask(null);
     } catch (e: any) {
-      setState({ error: e.message || i.errorSave });
+      setState({ error: e.message || t("error.save") });
     }
   };
 
@@ -215,7 +238,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     if (!serviceRef.current) return;
     const completed = await serviceRef.current.complete(taskId);
     if (completed) {
-      setState({ tasks: store.tasks.map((t) => (t.id === completed.id ? completed : t)) });
+      setState({ tasks: getState().tasks.map((t) => (t.id === completed.id ? completed : t)) });
     }
   };
 
@@ -223,7 +246,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     if (!serviceRef.current) return;
     const skipped = await serviceRef.current.skip(taskId);
     if (skipped) {
-      setState({ tasks: store.tasks.map((t) => (t.id === skipped.id ? skipped : t)) });
+      setState({ tasks: getState().tasks.map((t) => (t.id === skipped.id ? skipped : t)) });
     }
   };
 
@@ -231,102 +254,128 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     if (!serviceRef.current) return;
     try {
       await serviceRef.current.delete(taskId);
-      setState({ tasks: store.tasks.filter((t) => t.id !== taskId) });
+      setState({ tasks: getState().tasks.filter((t) => t.id !== taskId) });
       setEditorTask(null);
     } catch (e: any) {
-      setState({ error: e.message || i.errorDelete });
+      setState({ error: e.message || t("error.delete") });
     }
   };
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     if (!serviceRef.current) return;
-    const task = store.tasks.find((t) => t.id === taskId);
+    const task = getState().tasks.find((t) => t.id === taskId);
     if (!task) return;
     const updated = await serviceRef.current.update({ ...task, status: newStatus });
-    setState({ tasks: store.tasks.map((t) => (t.id === updated.id ? updated : t)) });
+    setState({ tasks: getState().tasks.map((t) => (t.id === updated.id ? updated : t)) });
   };
 
   const handleStartTimer = async (taskId: string) => {
     if (!serviceRef.current) return;
-    const task = store.tasks.find((t) => t.id === taskId);
+    const task = getState().tasks.find((t) => t.id === taskId);
     if (!task) return;
     const updated = await serviceRef.current.update(startTimer(task));
-    setState({ tasks: store.tasks.map((t) => (t.id === updated.id ? updated : t)), timerTaskId: taskId });
+    setState({ tasks: getState().tasks.map((t) => (t.id === updated.id ? updated : t)), timerTaskId: taskId });
   };
 
   const handleStopTimer = async (taskId: string) => {
     if (!serviceRef.current) return;
-    const task = store.tasks.find((t) => t.id === taskId);
+    const task = getState().tasks.find((t) => t.id === taskId);
     if (!task) return;
     const updated = await serviceRef.current.update(stopTimer(task));
-    setState({ tasks: store.tasks.map((t) => (t.id === updated.id ? updated : t)), timerTaskId: null });
+    setState({ tasks: getState().tasks.map((t) => (t.id === updated.id ? updated : t)), timerTaskId: null });
   };
 
   // --- Calendar sync handlers ---
   const handleSyncTask = async (taskId: string) => {
     if (!serviceRef.current || !api.calendar) return;
-    const task = store.tasks.find((t) => t.id === taskId);
+    const task = getState().tasks.find((t) => t.id === taskId);
     if (!task) return;
     try {
       const synced = await syncTaskToCalendar(api.calendar, task);
       const updated = await serviceRef.current.update(synced);
-      const newTasks = store.tasks.map((t) => (t.id === updated.id ? updated : t));
-      setState({ tasks: newTasks });
-      // Re-open editor with updated task so calendarHtmlLink is visible
+      setState({ tasks: getState().tasks.map((t) => (t.id === updated.id ? updated : t)) });
       setEditorTask(updated);
     } catch (e: any) {
-      setState({ error: e.message || i.errorCalendarSync });
+      setState({ error: e.message || t("error.calendarSync") });
     }
   };
 
   const handleUnsyncTask = async (taskId: string) => {
     if (!serviceRef.current || !api.calendar) return;
-    const task = store.tasks.find((t) => t.id === taskId);
+    const task = getState().tasks.find((t) => t.id === taskId);
     if (!task) return;
     try {
       const unsynced = await unsyncTaskFromCalendar(api.calendar, task);
       const updated = await serviceRef.current.update(unsynced);
-      const newTasks = store.tasks.map((t) => (t.id === updated.id ? updated : t));
-      setState({ tasks: newTasks });
-      // Re-open editor with updated task so sync state is reflected
+      setState({ tasks: getState().tasks.map((t) => (t.id === updated.id ? updated : t)) });
       setEditorTask(updated);
     } catch (e: any) {
-      setState({ error: e.message || i.errorCalendarSync });
+      setState({ error: e.message || t("error.calendarSync") });
     }
   };
 
   const handleSyncAllTasks = async () => {
     if (!serviceRef.current || !api.calendar) return;
-    const tasksWithDue = store.tasks.filter(
+    const tasksWithDue = getState().tasks.filter(
       (t) => (t.due || t.scheduled) && t.status !== "cancelled"
     );
-    let updatedTasks = [...store.tasks];
     for (const task of tasksWithDue) {
       try {
         const synced = await syncTaskToCalendar(api.calendar, task);
         const updated = await serviceRef.current.update(synced);
-        updatedTasks = updatedTasks.map((t) => (t.id === updated.id ? updated : t));
+        setState({ tasks: getState().tasks.map((t) => (t.id === updated.id ? updated : t)) });
       } catch {
         // continue syncing remaining tasks
       }
     }
-    setState({ tasks: updatedTasks });
   };
 
-  // Fetch Google Calendar events for the calendar view
-  const loadCalendarEvents = React.useCallback(async (startDate: Date, endDate: Date) => {
-    if (!api.calendar || !store.calendarAvailable) return;
+  const [lastFetched, setLastFetched] = React.useState<string | null>(null);
+
+  // Load cached lastFetched timestamp
+  React.useEffect(() => {
+    api.storage.get("calendarLastFetched").then((v) => {
+      if (typeof v === "string") setLastFetched(v);
+    });
+  }, []);
+
+  // Fetch Google Calendar events for a date range and cache
+  const handleFetchCalendarEvents = async (startDate: Date, endDate: Date) => {
+    if (!api.calendar || !getState().calendarAvailable) return;
     try {
       const events = await fetchCalendarEvents(
         api.calendar,
         startDate.toISOString(),
         endDate.toISOString()
       );
-      setState({ calendarEvents: events });
-    } catch {
-      // silently fail — calendar events are supplementary
+      // Merge with existing events (keep events outside this range)
+      const startStr = startDate.toISOString().slice(0, 10);
+      const endStr = endDate.toISOString().slice(0, 10);
+      const existing = getState().calendarEvents.filter((ev) => {
+        const d = ev.start.slice(0, 10);
+        return d < startStr || d > endStr;
+      });
+      const merged = [...existing, ...events];
+      setState({ calendarEvents: merged });
+      await api.storage.set("cachedCalendarEvents", merged);
+      const now = new Date().toLocaleString();
+      setLastFetched(now);
+      await api.storage.set("calendarLastFetched", now);
+    } catch (e: any) {
+      setState({ error: e.message || t("error.calendarSync") });
     }
-  }, [api.calendar, store.calendarAvailable]);
+  };
+
+  const handleSelect = async (task: Task) => {
+    if (!serviceRef.current) { setEditorTask(task); return; }
+    const reloaded = await serviceRef.current.reloadById(task.id);
+    if (reloaded) {
+      setState({ tasks: getState().tasks.map((t) => (t.id === reloaded.id ? reloaded : t)) });
+      setEditorTask(reloaded);
+    } else {
+      setEditorTask(task);
+    }
+  };
 
   const setView = (view: ViewType) => setState({ currentView: view });
   const toggleCompleted = () => setState({ filter: { ...store.filter, hideCompleted: !store.filter.hideCompleted } });
@@ -338,13 +387,13 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     <div className={`tn-panel ${expanded ? "tn-panel-expanded" : ""}`}>
       {/* Header */}
       <div className="tn-header">
-        <h2>{i.pluginName}</h2>
+        <h2>{t("plugin.name")}</h2>
         <div className="tn-header-actions">
-          <span className="tn-task-count">{taskCount} {taskCount === 1 ? i.task : i.tasks}</span>
+          <span className="tn-task-count">{taskCount} {taskCount === 1 ? t("task") : t("tasks")}</span>
           <button
             className="tn-btn tn-expand-btn"
             onClick={() => setExpanded(!expanded)}
-            title={expanded ? i.collapse : i.expand}
+            title={expanded ? t("collapse") : t("expand")}
           >
             {expanded ? "\u2716" : "\u2922"}
           </button>
@@ -354,10 +403,10 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
       {/* Create buttons */}
       <div className="tn-create-buttons">
         <button className="tn-btn-primary tn-ai-btn" onClick={() => setAiModalOpen(true)}>
-          &#x2728; {i.aiCreate}
+          &#x2728; {t("ai.create")}
         </button>
         <button className="tn-btn" onClick={() => setEditorTask("new")}>
-          &#x270F; {i.newTask}
+          &#x270F; {t("newTask")}
         </button>
       </div>
 
@@ -365,13 +414,13 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
       {aiModalOpen && (
         <div className="tn-editor-overlay" onClick={() => { if (!aiLoading) { setAiModalOpen(false); setAiInput(""); } }}>
           <div className="tn-ai-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>&#x2728; {i.aiCreate}</h3>
+            <h3>&#x2728; {t("ai.create")}</h3>
             <textarea
               className="tn-ai-textarea"
               rows={4}
               value={aiInput}
               onChange={(e) => setAiInput(e.target.value)}
-              placeholder={i.aiPlaceholder}
+              placeholder={t("ai.placeholder")}
               disabled={aiLoading}
               autoFocus
               onKeyDown={(e) => {
@@ -384,10 +433,10 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
                 onClick={handleAICreate}
                 disabled={aiLoading || !aiInput.trim()}
               >
-                {aiLoading ? i.aiParsing : i.aiCreate}
+                {aiLoading ? t("ai.parsing") : t("ai.create")}
               </button>
               <button className="tn-btn" onClick={() => { setAiModalOpen(false); setAiInput(""); }} disabled={aiLoading}>
-                {i.cancel}
+                {t("cancel")}
               </button>
             </div>
           </div>
@@ -402,7 +451,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
             className={`tn-tab ${store.currentView === view ? "tn-tab-active" : ""}`}
             onClick={() => setView(view)}
           >
-            {i[view === "list" ? "taskList" : view] as string}
+            {t(`view.${view}`)}
           </button>
         ))}
       </div>
@@ -411,7 +460,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
       <div className="tn-toolbar">
         <input
           type="text"
-          placeholder={i.searchPlaceholder}
+          placeholder={t("search.placeholder")}
           className="tn-search"
           value={store.filter.search || ""}
           onChange={(e) => setState({ filter: { ...store.filter, search: e.target.value || undefined } })}
@@ -423,10 +472,10 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
             value={store.filter.status?.[0] || ""}
             onChange={(e) => setState({ filter: { ...store.filter, status: e.target.value ? [e.target.value as TaskStatus] : undefined } })}
           >
-            <option value="">{i.filterByStatus}: {i.filterAll}</option>
+            <option value="">{t("filter.status")}: {t("filter.all")}</option>
             {STATUS_ORDER.map((s) => (
               <option key={s} value={s}>
-                {i[`status${s.charAt(0).toUpperCase() + s.slice(1).replace(/_./g, (m) => m[1].toUpperCase())}` as keyof typeof i] as string}
+                {t(`status.${s}`)}
               </option>
             ))}
           </select>
@@ -436,10 +485,10 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
             value={store.filter.priority?.[0] || ""}
             onChange={(e) => setState({ filter: { ...store.filter, priority: e.target.value ? [e.target.value as TaskPriority] : undefined } })}
           >
-            <option value="">{i.filterByPriority}: {i.filterAll}</option>
+            <option value="">{t("filter.priority")}: {t("filter.all")}</option>
             {(["none", "low", "medium", "high", "urgent"] as TaskPriority[]).map((p) => (
               <option key={p} value={p}>
-                {i[`priority${p.charAt(0).toUpperCase() + p.slice(1)}` as keyof typeof i] as string}
+                {t(`priority.${p}`)}
               </option>
             ))}
           </select>
@@ -450,7 +499,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
               value={store.filter.contexts?.[0] || ""}
               onChange={(e) => setState({ filter: { ...store.filter, contexts: e.target.value ? [e.target.value] : undefined } })}
             >
-              <option value="">{i.filterByContext}: {i.filterAll}</option>
+              <option value="">{t("filter.context")}: {t("filter.all")}</option>
               {uniqueContexts.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -463,7 +512,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
               value={store.filter.tags?.[0] || ""}
               onChange={(e) => setState({ filter: { ...store.filter, tags: e.target.value ? [e.target.value] : undefined } })}
             >
-              <option value="">{i.filterByTag}: {i.filterAll}</option>
+              <option value="">{t("filter.tag")}: {t("filter.all")}</option>
               {uniqueTags.map((tag) => (
                 <option key={tag} value={tag}>{tag}</option>
               ))}
@@ -476,7 +525,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
               value={store.filter.projects?.[0] || ""}
               onChange={(e) => setState({ filter: { ...store.filter, projects: e.target.value ? [e.target.value] : undefined } })}
             >
-              <option value="">{i.filterByProject}: {i.filterAll}</option>
+              <option value="">{t("filter.project")}: {t("filter.all")}</option>
               {uniqueProjects.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
@@ -490,7 +539,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
             checked={!store.filter.hideCompleted}
             onChange={toggleCompleted}
           />
-          <span className="tn-toggle-label">{i.showCompleted}</span>
+          <span className="tn-toggle-label">{t("showCompleted")}</span>
         </label>
         <label className="tn-toggle">
           <input
@@ -498,10 +547,10 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
             checked={!store.filter.hideArchived}
             onChange={toggleArchived}
           />
-          <span className="tn-toggle-label">{i.showArchived}</span>
+          <span className="tn-toggle-label">{t("showArchived")}</span>
         </label>
-        {store.calendarAvailable && store.settings.calendarSync && (
-          <button className="tn-btn tn-cal-sync-btn" onClick={handleSyncAllTasks} title={i.calendarSyncAll}>
+        {store.calendarAvailable && (
+          <button className="tn-btn tn-cal-sync-btn" onClick={handleSyncAllTasks} title={t("calendar.syncAll")}>
             &#x1F4C5;
           </button>
         )}
@@ -515,7 +564,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
       )}
 
       {/* Loading */}
-      {store.loading && <div className="tn-loading">Loading...</div>}
+      {store.loading && <div className="tn-loading">{t("loading")}</div>}
 
       {/* Views */}
       {!store.loading && (
@@ -523,40 +572,38 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
           {store.currentView === "list" && (
             <TaskListView
               tasks={filteredTasks}
-              onSelect={(task) => setEditorTask(task)}
+              onSelect={handleSelect}
               onComplete={handleComplete}
               onSkip={handleSkip}
               onStartTimer={handleStartTimer}
               onStopTimer={handleStopTimer}
-              locale={locale}
             />
           )}
           {store.currentView === "kanban" && (
             <KanbanView
               tasks={filteredTasks}
-              onSelect={(task) => setEditorTask(task)}
+              onSelect={handleSelect}
               onStatusChange={handleStatusChange}
-              locale={locale}
             />
           )}
           {store.currentView === "calendar" && (
             <CalendarView
               tasks={filteredTasks}
-              onSelect={(task) => setEditorTask(task)}
+              onSelect={handleSelect}
               layout={calendarLayout}
               onLayoutChange={setCalendarLayout}
-              locale={locale}
-              calendarEvents={store.calendarAvailable && store.settings.calendarSync ? store.calendarEvents : []}
-              onDateRangeChange={store.calendarAvailable && store.settings.calendarSync ? loadCalendarEvents : undefined}
+              language={language}
+              calendarEvents={store.calendarAvailable ? store.calendarEvents : []}
+              onFetchEvents={store.calendarAvailable ? handleFetchCalendarEvents : undefined}
+              lastFetched={lastFetched}
             />
           )}
           {store.currentView === "agenda" && (
             <AgendaView
               tasks={filteredTasks}
-              onSelect={(task) => setEditorTask(task)}
+              onSelect={handleSelect}
               onComplete={handleComplete}
               onSkip={handleSkip}
-              locale={locale}
             />
           )}
         </>
@@ -564,7 +611,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
 
       {/* Empty state */}
       {!store.loading && store.tasks.length === 0 && (
-        <div className="tn-empty">{i.noTasks}</div>
+        <div className="tn-empty">{t("noTasks")}</div>
       )}
 
       {/* Editor modal */}
@@ -577,8 +624,8 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
           onCancel={() => setEditorTask(null)}
           onDelete={handleDelete}
           onOpenNote={handleOpenNote}
-          locale={locale}
-          calendarAvailable={store.calendarAvailable && store.settings.calendarSync}
+          language={language}
+          calendarAvailable={store.calendarAvailable}
           onSyncCalendar={handleSyncTask}
           onUnsyncCalendar={handleUnsyncTask}
         />

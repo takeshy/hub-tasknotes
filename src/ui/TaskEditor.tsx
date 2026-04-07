@@ -4,8 +4,9 @@
 
 import * as React from "react";
 import { Task, TaskStatus, TaskPriority, STATUS_ORDER } from "../types";
-import { t } from "../i18n";
+import { t, setLanguage } from "../i18n";
 import { describeRRule, buildRRule } from "../core/recurrence";
+import { formatDuration } from "../core/timeTracking";
 
 interface TaskEditorProps {
   task: Task | null;
@@ -14,14 +15,25 @@ interface TaskEditorProps {
   onCancel: () => void;
   onDelete?: (taskId: string) => void;
   onOpenNote?: (task: Task, fileId: string) => void;
-  locale?: string;
+  language?: string;
   calendarAvailable?: boolean;
   onSyncCalendar?: (taskId: string) => void;
   onUnsyncCalendar?: (taskId: string) => void;
 }
 
-export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNote, locale, calendarAvailable, onSyncCalendar, onUnsyncCalendar }: TaskEditorProps) {
-  const i = t(locale);
+/** Convert UTC ISO string to local datetime-local value (YYYY-MM-DDTHH:MM) */
+function toLocalDatetime(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${m}-${day}T${h}:${min}`;
+}
+
+export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNote, language, calendarAvailable, onSyncCalendar, onUnsyncCalendar }: TaskEditorProps) {
+  React.useEffect(() => { if (language) setLanguage(language); }, [language]);
   const isNew = !task || !task.id;
   const [form, setForm] = React.useState<Task>(
     task ?? {
@@ -117,12 +129,12 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
     <div className="tn-editor-overlay" onClick={onCancel}>
       <form className="tn-editor" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
         <div className="tn-editor-header">
-          <h3>{isNew ? i.newTask : i.editTask}</h3>
+          <h3>{isNew ? t("newTask") : t("editTask")}</h3>
           {!isNew && fileId && onOpenNote && (
             <button
               type="button"
               className="tn-open-note-btn"
-              title={i.openNote}
+              title={t("openNote")}
               onClick={() => {
                 const contexts = contextsInput.split(",").map((s) => s.trim()).filter(Boolean);
                 const tags = tagsInput.split(",").map((s) => s.trim()).filter(Boolean);
@@ -138,34 +150,34 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
         </div>
 
         <label className="tn-field">
-          <span>{i.title}</span>
+          <span>{t("title")}</span>
           <input
             type="text"
             value={form.title}
             onChange={(e) => setField("title", e.target.value)}
-            placeholder={i.newTaskPlaceholder}
+            placeholder={t("newTask.placeholder")}
             autoFocus
           />
         </label>
 
         <div className="tn-field-row">
           <label className="tn-field">
-            <span>{i.status}</span>
+            <span>{t("status")}</span>
             <select value={form.status} onChange={(e) => setField("status", e.target.value as TaskStatus)}>
               {STATUS_ORDER.map((s) => (
                 <option key={s} value={s}>
-                  {i[`status${s.charAt(0).toUpperCase() + s.slice(1).replace(/_./g, (m) => m[1].toUpperCase())}` as keyof typeof i] as string}
+                  {t(`status.${s}`)}
                 </option>
               ))}
             </select>
           </label>
 
           <label className="tn-field">
-            <span>{i.priority}</span>
+            <span>{t("priority")}</span>
             <select value={form.priority} onChange={(e) => setField("priority", e.target.value as TaskPriority)}>
               {(["none", "low", "medium", "high", "urgent"] as TaskPriority[]).map((p) => (
                 <option key={p} value={p}>
-                  {i[`priority${p.charAt(0).toUpperCase() + p.slice(1)}` as keyof typeof i] as string}
+                  {t(`priority.${p}`)}
                 </option>
               ))}
             </select>
@@ -174,7 +186,7 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
 
         <div className="tn-field-row">
           <label className="tn-field">
-            <span>{i.due}</span>
+            <span>{t("due")}</span>
             <input
               type="date"
               value={form.due ?? ""}
@@ -183,7 +195,7 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
           </label>
 
           <label className="tn-field">
-            <span>{i.timeEstimate} (min)</span>
+            <span>{t("timeEstimate.label")}</span>
             <input
               type="number"
               min="0"
@@ -195,7 +207,7 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
 
         <div className="tn-field-row">
           <label className="tn-field">
-            <span>{i.scheduled}</span>
+            <span>{t("scheduled")}</span>
             <input
               type="date"
               value={scheduledDate}
@@ -212,7 +224,7 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
             />
           </label>
           <label className="tn-field">
-            <span>{i.dueTime}</span>
+            <span>{t("dueTime")}</span>
             <input
               type="time"
               value={scheduledTime}
@@ -229,86 +241,155 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
         </div>
 
         <label className="tn-field">
-          <span>{i.contexts} (comma-separated)</span>
+          <span>{t("contexts")} ({t("commaSeparated")})</span>
           <input
             type="text"
             value={contextsInput}
             onChange={(e) => setContextsInput(e.target.value)}
-            placeholder="errands, home, work"
+            placeholder={t("placeholder.contexts")}
           />
         </label>
 
         <label className="tn-field">
-          <span>{i.tags} (comma-separated)</span>
+          <span>{t("tags")} ({t("commaSeparated")})</span>
           <input
             type="text"
             value={tagsInput}
             onChange={(e) => setTagsInput(e.target.value)}
-            placeholder="errands, review"
+            placeholder={t("placeholder.tags")}
           />
         </label>
 
         <label className="tn-field">
-          <span>{i.projects} (comma-separated)</span>
+          <span>{t("projects")} ({t("commaSeparated")})</span>
           <input
             type="text"
             value={projectsInput}
             onChange={(e) => setProjectsInput(e.target.value)}
-            placeholder="shopping, renovation"
+            placeholder={t("placeholder.projects")}
           />
         </label>
 
         <label className="tn-field">
-          <span>{i.recurrence}</span>
+          <span>{t("recurrence")}</span>
           <select value={recurrencePreset} onChange={(e) => handleRecurrenceChange(e.target.value)}>
             <option value="none">-</option>
-            <option value="daily">{i.recurrenceDaily}</option>
-            <option value="weekly">{i.recurrenceWeekly}</option>
-            <option value="monthly">{i.recurrenceMonthly}</option>
-            <option value="yearly">{i.recurrenceYearly}</option>
+            <option value="daily">{t("recurrence.daily")}</option>
+            <option value="weekly">{t("recurrence.weekly")}</option>
+            <option value="monthly">{t("recurrence.monthly")}</option>
+            <option value="yearly">{t("recurrence.yearly")}</option>
           </select>
           {form.recurrence && (
-            <span className="tn-hint">{describeRRule(form.recurrence.rrule, locale)}</span>
+            <span className="tn-hint">{describeRRule(form.recurrence.rrule)}</span>
           )}
         </label>
 
         {form.recurrence && (
           <label className="tn-field">
-            <span>{i.recurrenceAnchor}</span>
+            <span>{t("recurrenceAnchor")}</span>
             <select
               value={form.recurrence.recurrenceAnchor}
               onChange={(e) =>
                 setField("recurrence", { ...form.recurrence!, recurrenceAnchor: e.target.value as "scheduled" | "completion" })
               }
             >
-              <option value="scheduled">{i.recurrenceAnchorScheduled}</option>
-              <option value="completion">{i.recurrenceAnchorCompletion}</option>
+              <option value="scheduled">{t("recurrenceAnchor.scheduled")}</option>
+              <option value="completion">{t("recurrenceAnchor.completion")}</option>
             </select>
           </label>
         )}
 
         <label className="tn-field">
-          <span>{i.blockedBy} ({i.commaSeparatedIds})</span>
+          <span>{t("blockedBy")} ({t("commaSeparatedIds")})</span>
           <input
             type="text"
             value={blockedByInput}
             onChange={(e) => setBlockedByInput(e.target.value)}
-            placeholder="task-abc123, task-def456"
+            placeholder={t("placeholder.taskIds")}
           />
         </label>
 
         <label className="tn-field">
-          <span>{i.blocking} ({i.commaSeparatedIds})</span>
+          <span>{t("blocking")} ({t("commaSeparatedIds")})</span>
           <input
             type="text"
             value={blockingInput}
             onChange={(e) => setBlockingInput(e.target.value)}
-            placeholder="task-abc123, task-def456"
+            placeholder={t("placeholder.taskIds")}
           />
         </label>
 
+        {/* Time entries */}
+        <div className="tn-field tn-time-entries">
+          <span>{t("timeEntries")}</span>
+          {form.timeEntries.length > 0 ? (
+            <div className="tn-time-entries-list">
+              {form.timeEntries.map((entry, idx) => {
+                const startDate = new Date(entry.start);
+                const endDate = entry.end ? new Date(entry.end) : null;
+                const durationSec = endDate
+                  ? Math.floor((endDate.getTime() - startDate.getTime()) / 1000)
+                  : Math.floor((Date.now() - startDate.getTime()) / 1000);
+                return (
+                  <div key={idx} className="tn-time-entry-row">
+                    <input
+                      type="datetime-local"
+                      value={toLocalDatetime(entry.start)}
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        const entries = [...form.timeEntries];
+                        entries[idx] = { ...entries[idx], start: new Date(e.target.value).toISOString() };
+                        setField("timeEntries", entries);
+                      }}
+                    />
+                    <span className="tn-time-entry-sep">-</span>
+                    {entry.end ? (
+                      <input
+                        type="datetime-local"
+                        value={toLocalDatetime(entry.end)}
+                        onChange={(e) => {
+                          if (!e.target.value) return;
+                          const entries = [...form.timeEntries];
+                          entries[idx] = { ...entries[idx], end: new Date(e.target.value).toISOString() };
+                          setField("timeEntries", entries);
+                        }}
+                      />
+                    ) : (
+                      <span className="tn-time-entry-running">{t("timeEntries.running")}</span>
+                    )}
+                    <span className="tn-time-entry-duration">{formatDuration(durationSec)}</span>
+                    <button
+                      type="button"
+                      className="tn-btn-icon"
+                      onClick={() => {
+                        const entries = form.timeEntries.filter((_, i) => i !== idx);
+                        setField("timeEntries", entries);
+                      }}
+                      title={t("delete")}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="tn-time-entries-empty">{t("timeEntries.none")}</div>
+          )}
+          <button
+            type="button"
+            className="tn-btn tn-btn-small"
+            onClick={() => {
+              const now = new Date().toISOString();
+              setField("timeEntries", [...form.timeEntries, { start: now, end: now }]);
+            }}
+          >
+            + {t("timeEntries.add")}
+          </button>
+        </div>
+
         <label className="tn-field">
-          <span>{i.notes}</span>
+          <span>{t("notes")}</span>
           <textarea
             rows={4}
             value={form.body}
@@ -322,18 +403,18 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
             {form.calendarHtmlLink ? (
               <div className="tn-calendar-synced">
                 <a href={form.calendarHtmlLink} target="_blank" rel="noopener noreferrer" className="tn-calendar-link">
-                  {i.calendarOpenEvent} &#x2197;
+                  {t("calendar.openEvent")} &#x2197;
                 </a>
                 {onUnsyncCalendar && (
                   <button type="button" className="tn-btn tn-btn-small" onClick={() => onUnsyncCalendar(form.id)}>
-                    {i.calendarUnsyncTask}
+                    {t("calendar.unsyncTask")}
                   </button>
                 )}
               </div>
             ) : (
               onSyncCalendar && (
                 <button type="button" className="tn-btn tn-btn-small" onClick={() => onSyncCalendar(form.id)}>
-                  &#x1F4C5; {i.calendarSyncTask}
+                  &#x1F4C5; {t("calendar.syncTask")}
                 </button>
               )
             )}
@@ -342,10 +423,10 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
 
         <div className="tn-editor-actions">
           <button type="submit" className="tn-btn-primary">
-            {i.save}
+            {t("save")}
           </button>
           <button type="button" className="tn-btn" onClick={onCancel}>
-            {i.cancel}
+            {t("cancel")}
           </button>
           {!isNew && (
             <button
@@ -360,7 +441,7 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
                 onSave({ ...form, contexts, tags, projects, blockedBy, blocking, archived: !form.archived, modifiedDate: new Date().toISOString() });
               }}
             >
-              {form.archived ? i.unarchiveTask : i.archiveTask}
+              {form.archived ? t("unarchive") : t("archive")}
             </button>
           )}
           {!isNew && onDelete && (
@@ -368,10 +449,10 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
               type="button"
               className="tn-btn-danger"
               onClick={() => {
-                if (confirm(i.deleteConfirm)) onDelete(form.id);
+                if (confirm(t("deleteConfirm"))) onDelete(form.id);
               }}
             >
-              {i.deleteTask}
+              {t("deleteTask")}
             </button>
           )}
         </div>

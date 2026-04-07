@@ -112,38 +112,25 @@ export function getNextOccurrence(rule: RecurrenceRule, baseDate: string): strin
 }
 
 /** Get a human-readable description of a recurrence rule */
-export function describeRRule(rrule: string, locale?: string): string {
+export function describeRRule(rrule: string): string {
+  const { t } = require("../i18n") as { t: (key: string) => string };
   const parts = parseRRule(rrule);
-  const isJa = locale?.startsWith("ja");
-
   const interval = parts.interval;
 
-  if (isJa) {
+  if (interval === 1) {
     switch (parts.freq) {
-      case "DAILY":
-        return interval === 1 ? "毎日" : `${interval}日ごと`;
-      case "WEEKLY":
-        return interval === 1 ? "毎週" : `${interval}週間ごと`;
-      case "MONTHLY":
-        return interval === 1 ? "毎月" : `${interval}ヶ月ごと`;
-      case "YEARLY":
-        return interval === 1 ? "毎年" : `${interval}年ごと`;
+      case "DAILY": return t("recurrence.daily");
+      case "WEEKLY": {
+        const base = t("recurrence.weekly");
+        if (parts.byDay.length > 0) return `${base} (${parts.byDay.join(", ")})`;
+        return base;
+      }
+      case "MONTHLY": return t("recurrence.monthly");
+      case "YEARLY": return t("recurrence.yearly");
     }
   }
 
-  switch (parts.freq) {
-    case "DAILY":
-      return interval === 1 ? "Daily" : `Every ${interval} days`;
-    case "WEEKLY": {
-      const base = interval === 1 ? "Weekly" : `Every ${interval} weeks`;
-      if (parts.byDay.length > 0) return `${base} on ${parts.byDay.join(", ")}`;
-      return base;
-    }
-    case "MONTHLY":
-      return interval === 1 ? "Monthly" : `Every ${interval} months`;
-    case "YEARLY":
-      return interval === 1 ? "Yearly" : `Every ${interval} years`;
-  }
+  return t(`recurrence.every.${parts.freq.toLowerCase()}`).replace("{0}", String(interval));
 }
 
 function formatDate(date: Date): string {

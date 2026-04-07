@@ -13,14 +13,28 @@ interface CalendarViewProps {
   onSelect: (task: Task) => void;
   layout: CalendarLayout;
   onLayoutChange: (layout: CalendarLayout) => void;
-  locale?: string;
+  language?: string;
   calendarEvents?: CalendarEvent[];
   onDateRangeChange?: (start: Date, end: Date) => void;
+  onFetchEvents?: (start: Date, end: Date) => Promise<void>;
+  lastFetched?: string | null;
 }
 
-export function CalendarView({ tasks, onSelect, layout, onLayoutChange, locale, calendarEvents = [], onDateRangeChange }: CalendarViewProps) {
-  const i = t(locale);
+export function CalendarView({ tasks, onSelect, layout, onLayoutChange, language, calendarEvents = [], onDateRangeChange, onFetchEvents, lastFetched }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [fetching, setFetching] = React.useState(false);
+
+  const handleFetch = async () => {
+    if (!onFetchEvents || fetching) return;
+    setFetching(true);
+    try {
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
+      await onFetchEvents(start, end);
+    } finally {
+      setFetching(false);
+    }
+  };
 
   // Compute visible date range and notify parent to fetch calendar events
   React.useEffect(() => {
@@ -86,25 +100,36 @@ export function CalendarView({ tasks, onSelect, layout, onLayoutChange, locale, 
       <div className="tn-calendar-toolbar">
         <div className="tn-calendar-nav">
           <button className="tn-btn" onClick={() => navigate(-1)}>&lt;</button>
-          <button className="tn-btn" onClick={goToday}>{i.today}</button>
+          <button className="tn-btn" onClick={goToday}>{t("today")}</button>
           <button className="tn-btn" onClick={() => navigate(1)}>&gt;</button>
         </div>
-        <div className="tn-calendar-current">{formatMonthYear(currentDate, locale)}</div>
+        <div className="tn-calendar-current">{formatMonthYear(currentDate, language)}</div>
         <div className="tn-calendar-layout-switch">
-          <button className={`tn-btn ${layout === "month" ? "tn-btn-active" : ""}`} onClick={() => onLayoutChange("month")}>{i.calendarMonth}</button>
-          <button className={`tn-btn ${layout === "week" ? "tn-btn-active" : ""}`} onClick={() => onLayoutChange("week")}>{i.calendarWeek}</button>
-          <button className={`tn-btn ${layout === "day" ? "tn-btn-active" : ""}`} onClick={() => onLayoutChange("day")}>{i.calendarDay}</button>
+          <button className={`tn-btn ${layout === "month" ? "tn-btn-active" : ""}`} onClick={() => onLayoutChange("month")}>{t("calendar.month")}</button>
+          <button className={`tn-btn ${layout === "week" ? "tn-btn-active" : ""}`} onClick={() => onLayoutChange("week")}>{t("calendar.week")}</button>
+          <button className={`tn-btn ${layout === "day" ? "tn-btn-active" : ""}`} onClick={() => onLayoutChange("day")}>{t("calendar.day")}</button>
         </div>
       </div>
 
+      {onFetchEvents && (
+        <div className="tn-calendar-fetch">
+          <button className="tn-btn tn-btn-small" onClick={handleFetch} disabled={fetching}>
+            {fetching ? t("calendar.fetching") : t("calendar.fetchEvents")}
+          </button>
+          {lastFetched && (
+            <span className="tn-calendar-fetch-time">{lastFetched}</span>
+          )}
+        </div>
+      )}
+
       {layout === "month" && (
-        <MonthGrid currentDate={currentDate} tasksByDate={tasksByDate} eventsByDate={eventsByDate} onSelect={onSelect} locale={locale} />
+        <MonthGrid currentDate={currentDate} tasksByDate={tasksByDate} eventsByDate={eventsByDate} onSelect={onSelect} language={language} />
       )}
       {layout === "week" && (
-        <WeekGrid currentDate={currentDate} tasksByDate={tasksByDate} eventsByDate={eventsByDate} onSelect={onSelect} locale={locale} />
+        <WeekGrid currentDate={currentDate} tasksByDate={tasksByDate} eventsByDate={eventsByDate} onSelect={onSelect} language={language} />
       )}
       {layout === "day" && (
-        <DayView currentDate={currentDate} tasksByDate={tasksByDate} eventsByDate={eventsByDate} onSelect={onSelect} locale={locale} />
+        <DayView currentDate={currentDate} tasksByDate={tasksByDate} eventsByDate={eventsByDate} onSelect={onSelect} language={language} />
       )}
     </div>
   );
@@ -115,13 +140,13 @@ function MonthGrid({
   tasksByDate,
   eventsByDate,
   onSelect,
-  locale,
+  language,
 }: {
   currentDate: Date;
   tasksByDate: Map<string, Task[]>;
   eventsByDate: Map<string, CalendarEvent[]>;
   onSelect: (task: Task) => void;
-  locale?: string;
+  language?: string;
 }) {
   const { activeTaskId } = useStore();
   const year = currentDate.getFullYear();
@@ -130,7 +155,7 @@ function MonthGrid({
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayStr = formatDateStr(new Date());
 
-  const dayNames = locale?.startsWith("ja")
+  const dayNames = language?.startsWith("ja")
     ? ["日", "月", "火", "水", "木", "金", "土"]
     : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -157,15 +182,19 @@ function MonthGrid({
     cells.push(
       <div key={dateStr} className={`tn-cal-cell ${isToday ? "tn-cal-today" : ""}`}>
         <div className="tn-cal-day-num">{day}</div>
-        {dayTasks.slice(0, 3).map((task) => (
-          <div
-            key={task.id}
-            className={`tn-cal-task tn-priority-${task.priority} ${task.id === activeTaskId ? "tn-active" : ""}`}
-            onClick={() => onSelect(task)}
-          >
-            {task.title}
-          </div>
-        ))}
+        {dayTasks.slice(0, 3).map((task) => {
+          const time = taskTime(task);
+          return (
+            <div
+              key={task.id}
+              className={`tn-cal-task tn-priority-${task.priority} ${task.id === activeTaskId ? "tn-active" : ""}`}
+              onClick={() => onSelect(task)}
+            >
+              {time && <span className="tn-cal-task-time">{time}</span>}
+              {task.title}
+            </div>
+          );
+        })}
         {dayEvents.slice(0, Math.max(0, 3 - dayTasks.length)).map((ev) => (
           <div
             key={ev.id}
@@ -189,13 +218,13 @@ function WeekGrid({
   tasksByDate,
   eventsByDate,
   onSelect,
-  locale,
+  language,
 }: {
   currentDate: Date;
   tasksByDate: Map<string, Task[]>;
   eventsByDate: Map<string, CalendarEvent[]>;
   onSelect: (task: Task) => void;
-  locale?: string;
+  language?: string;
 }) {
   const { activeTaskId } = useStore();
   const todayStr = formatDateStr(new Date());
@@ -214,15 +243,19 @@ function WeekGrid({
     days.push(
       <div key={dateStr} className={`tn-week-day ${isToday ? "tn-cal-today" : ""}`}>
         <div className="tn-week-day-header">
-          <span className="tn-week-day-name">{d.toLocaleDateString(locale || "en", { weekday: "short" })}</span>
+          <span className="tn-week-day-name">{d.toLocaleDateString(language || "en", { weekday: "short" })}</span>
           <span className="tn-week-day-num">{d.getDate()}</span>
         </div>
         <div className="tn-week-day-tasks">
-          {dayTasks.map((task) => (
-            <div key={task.id} className={`tn-cal-task tn-priority-${task.priority} ${task.id === activeTaskId ? "tn-active" : ""}`} onClick={() => onSelect(task)}>
-              {task.title}
-            </div>
-          ))}
+          {dayTasks.map((task) => {
+            const time = taskTime(task);
+            return (
+              <div key={task.id} className={`tn-cal-task tn-priority-${task.priority} ${task.id === activeTaskId ? "tn-active" : ""}`} onClick={() => onSelect(task)}>
+                {time && <span className="tn-cal-task-time">{time}</span>}
+                {task.title}
+              </div>
+            );
+          })}
           {dayEvents.map((ev) => (
             <div key={ev.id} className="tn-cal-event" onClick={() => ev.htmlLink && window.open(ev.htmlLink, "_blank")} title={ev.summary}>
               {ev.summary}
@@ -241,15 +274,14 @@ function DayView({
   tasksByDate,
   eventsByDate,
   onSelect,
-  locale,
+  language,
 }: {
   currentDate: Date;
   tasksByDate: Map<string, Task[]>;
   eventsByDate: Map<string, CalendarEvent[]>;
   onSelect: (task: Task) => void;
-  locale?: string;
+  language?: string;
 }) {
-  const i = t(locale);
   const { activeTaskId } = useStore();
   const dateStr = formatDateStr(currentDate);
   const dayTasks = tasksByDate.get(dateStr) || [];
@@ -259,20 +291,21 @@ function DayView({
   return (
     <div className="tn-cal-day-view">
       <div className="tn-cal-day-title">
-        {currentDate.toLocaleDateString(locale || "en", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+        {currentDate.toLocaleDateString(language || "en", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
       </div>
       {!hasItems ? (
-        <div className="tn-empty">{i.noTasksFiltered}</div>
+        <div className="tn-empty">{t("noTasks.filtered")}</div>
       ) : (
         <>
           {dayTasks.map((task) => {
             const formulas = computeFormulas(task);
+            const time = taskTime(task);
             return (
               <div key={task.id} className={`tn-task-row tn-priority-${task.priority} ${task.id === activeTaskId ? "tn-active" : ""}`} onClick={() => onSelect(task)}>
-                <div className="tn-task-title">{task.title}</div>
+                <div className="tn-task-title">{time && <span className="tn-cal-task-time">{time}</span>}{task.title}</div>
                 {task.priority !== "none" && (
                   <span className={`tn-priority-badge tn-priority-${task.priority}`}>
-                    {i[`priority${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}` as keyof typeof i] as string}
+                    {t(`priority.${task.priority}`)}
                   </span>
                 )}
               </div>
@@ -285,13 +318,20 @@ function DayView({
               onClick={() => ev.htmlLink && window.open(ev.htmlLink, "_blank")}
             >
               <div className="tn-task-title">{ev.summary}</div>
-              <span className="tn-cal-event-badge">{i.calendarEvent}</span>
+              <span className="tn-cal-event-badge">{t("calendar.event")}</span>
             </div>
           ))}
         </>
       )}
     </div>
   );
+}
+
+/** Extract HH:MM from scheduled time, or null if date-only */
+function taskTime(task: Task): string | null {
+  const s = task.scheduled;
+  if (!s || !s.includes("T")) return null;
+  return s.slice(11, 16);
 }
 
 function formatDateStr(date: Date): string {
@@ -301,6 +341,6 @@ function formatDateStr(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function formatMonthYear(date: Date, locale?: string): string {
-  return date.toLocaleDateString(locale || "en", { year: "numeric", month: "long" });
+function formatMonthYear(date: Date, language?: string): string {
+  return date.toLocaleDateString(language || "en", { year: "numeric", month: "long" });
 }

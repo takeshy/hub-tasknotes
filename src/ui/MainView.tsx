@@ -7,13 +7,13 @@ import { TaskPanel } from "./TaskPanel";
 
 interface MainViewProps {
   api: unknown;
-  locale?: string;
+  language?: string;
 }
 
-export function MainView({ api, locale }: MainViewProps) {
+export function MainView({ api, language }: MainViewProps) {
   return (
     <div className="tn-main-view">
-      <TaskPanel api={api as any} locale={locale} />
+      <TaskPanel api={api as any} language={language} />
     </div>
   );
 }
