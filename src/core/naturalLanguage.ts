@@ -13,7 +13,9 @@ import { createDefaultTask } from "./taskSerializer";
 interface ParsedInput {
   title: string;
   due: string | null;
+  scheduled: string | null;
   contexts: string[];
+  tags: string[];
   projects: string[];
   priority: "none" | "low" | "medium" | "high" | "urgent";
   recurrence: string | null;
@@ -23,14 +25,22 @@ interface ParsedInput {
 export function parseNaturalLanguage(input: string): ParsedInput {
   let remaining = input.trim();
   const contexts: string[] = [];
+  const tags: string[] = [];
   const projects: string[] = [];
   let priority: ParsedInput["priority"] = "none";
   let due: string | null = null;
+  let scheduled: string | null = null;
   let recurrence: string | null = null;
 
-  // Extract #contexts
-  remaining = remaining.replace(/#(\w+)/g, (_, ctx) => {
+  // Extract @contexts (callumalpass/tasknotes convention) — lookbehind avoids matching emails
+  remaining = remaining.replace(/(?<!\w)@(\w+)/g, (_, ctx) => {
     contexts.push(ctx);
+    return "";
+  });
+
+  // Extract #tags
+  remaining = remaining.replace(/#(\w+)/g, (_, tag) => {
+    tags.push(tag);
     return "";
   });
 
@@ -39,6 +49,13 @@ export function parseNaturalLanguage(input: string): ParsedInput {
     projects.push(proj);
     return "";
   });
+
+  // Extract ~scheduled date (YYYY-MM-DD or YYYY-MM-DDTHH:MM)
+  const scheduledMatch = remaining.match(/~(\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2})?)/);
+  if (scheduledMatch) {
+    scheduled = scheduledMatch[1];
+    remaining = remaining.replace(scheduledMatch[0], "");
+  }
 
   // Extract !priority
   remaining = remaining.replace(/!(\w+)/g, (_, p) => {
@@ -85,7 +102,7 @@ export function parseNaturalLanguage(input: string): ParsedInput {
 
   const title = remaining.replace(/\s+/g, " ").trim();
 
-  return { title, due, contexts, projects, priority, recurrence };
+  return { title, due, scheduled, contexts, tags, projects, priority, recurrence };
 }
 
 /** Create a Task from natural language input */
@@ -95,7 +112,9 @@ export function createTaskFromNaturalLanguage(input: string): Task {
   const task = createDefaultTask(id, parsed.title);
 
   task.due = parsed.due;
+  task.scheduled = parsed.scheduled;
   task.contexts = parsed.contexts;
+  task.tags = parsed.tags;
   task.projects = parsed.projects;
   task.priority = parsed.priority;
 

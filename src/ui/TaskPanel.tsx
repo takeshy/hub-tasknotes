@@ -3,7 +3,7 @@
  */
 
 import * as React from "react";
-import { Task, ViewType, TaskStatus, CalendarLayout } from "../types";
+import { Task, ViewType, TaskStatus, TaskPriority, CalendarLayout, STATUS_ORDER } from "../types";
 import { t } from "../i18n";
 import { useStore, setState } from "../store";
 import { TaskListView } from "./TaskListView";
@@ -110,6 +110,11 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     return serviceRef.current.query(store.tasks, store.filter, store.sort);
   }, [store.tasks, store.filter, store.sort]);
 
+  // Collect unique values for filter dropdowns (from all tasks, not filtered)
+  const uniqueContexts = React.useMemo(() => [...new Set(store.tasks.flatMap((t) => t.contexts))].sort(), [store.tasks]);
+  const uniqueTags = React.useMemo(() => [...new Set(store.tasks.flatMap((t) => t.tags))].sort(), [store.tasks]);
+  const uniqueProjects = React.useMemo(() => [...new Set(store.tasks.flatMap((t) => t.projects))].sort(), [store.tasks]);
+
   const callAI = async (input: string): Promise<string> => {
     const today = new Date().toISOString().slice(0, 10);
     const systemPrompt = AI_SYSTEM_PROMPT.replace("{{TODAY}}", today);
@@ -211,6 +216,14 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
     const completed = await serviceRef.current.complete(taskId);
     if (completed) {
       setState({ tasks: store.tasks.map((t) => (t.id === completed.id ? completed : t)) });
+    }
+  };
+
+  const handleSkip = async (taskId: string) => {
+    if (!serviceRef.current) return;
+    const skipped = await serviceRef.current.skip(taskId);
+    if (skipped) {
+      setState({ tasks: store.tasks.map((t) => (t.id === skipped.id ? skipped : t)) });
     }
   };
 
@@ -317,6 +330,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
 
   const setView = (view: ViewType) => setState({ currentView: view });
   const toggleCompleted = () => setState({ filter: { ...store.filter, hideCompleted: !store.filter.hideCompleted } });
+  const toggleArchived = () => setState({ filter: { ...store.filter, hideArchived: !store.filter.hideArchived } });
 
   const taskCount = store.tasks.filter((t) => t.status !== "done" && t.status !== "cancelled").length;
 
@@ -402,6 +416,74 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
           value={store.filter.search || ""}
           onChange={(e) => setState({ filter: { ...store.filter, search: e.target.value || undefined } })}
         />
+
+        <div className="tn-filters">
+          <select
+            className="tn-filter-select"
+            value={store.filter.status?.[0] || ""}
+            onChange={(e) => setState({ filter: { ...store.filter, status: e.target.value ? [e.target.value as TaskStatus] : undefined } })}
+          >
+            <option value="">{i.filterByStatus}: {i.filterAll}</option>
+            {STATUS_ORDER.map((s) => (
+              <option key={s} value={s}>
+                {i[`status${s.charAt(0).toUpperCase() + s.slice(1).replace(/_./g, (m) => m[1].toUpperCase())}` as keyof typeof i] as string}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="tn-filter-select"
+            value={store.filter.priority?.[0] || ""}
+            onChange={(e) => setState({ filter: { ...store.filter, priority: e.target.value ? [e.target.value as TaskPriority] : undefined } })}
+          >
+            <option value="">{i.filterByPriority}: {i.filterAll}</option>
+            {(["none", "low", "medium", "high", "urgent"] as TaskPriority[]).map((p) => (
+              <option key={p} value={p}>
+                {i[`priority${p.charAt(0).toUpperCase() + p.slice(1)}` as keyof typeof i] as string}
+              </option>
+            ))}
+          </select>
+
+          {uniqueContexts.length > 0 && (
+            <select
+              className="tn-filter-select"
+              value={store.filter.contexts?.[0] || ""}
+              onChange={(e) => setState({ filter: { ...store.filter, contexts: e.target.value ? [e.target.value] : undefined } })}
+            >
+              <option value="">{i.filterByContext}: {i.filterAll}</option>
+              {uniqueContexts.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
+
+          {uniqueTags.length > 0 && (
+            <select
+              className="tn-filter-select"
+              value={store.filter.tags?.[0] || ""}
+              onChange={(e) => setState({ filter: { ...store.filter, tags: e.target.value ? [e.target.value] : undefined } })}
+            >
+              <option value="">{i.filterByTag}: {i.filterAll}</option>
+              {uniqueTags.map((tag) => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+          )}
+
+          {uniqueProjects.length > 0 && (
+            <select
+              className="tn-filter-select"
+              value={store.filter.projects?.[0] || ""}
+              onChange={(e) => setState({ filter: { ...store.filter, projects: e.target.value ? [e.target.value] : undefined } })}
+            >
+              <option value="">{i.filterByProject}: {i.filterAll}</option>
+              {uniqueProjects.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
         <label className="tn-toggle">
           <input
             type="checkbox"
@@ -409,6 +491,14 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
             onChange={toggleCompleted}
           />
           <span className="tn-toggle-label">{i.showCompleted}</span>
+        </label>
+        <label className="tn-toggle">
+          <input
+            type="checkbox"
+            checked={!store.filter.hideArchived}
+            onChange={toggleArchived}
+          />
+          <span className="tn-toggle-label">{i.showArchived}</span>
         </label>
         {store.calendarAvailable && store.settings.calendarSync && (
           <button className="tn-btn tn-cal-sync-btn" onClick={handleSyncAllTasks} title={i.calendarSyncAll}>
@@ -435,6 +525,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
               tasks={filteredTasks}
               onSelect={(task) => setEditorTask(task)}
               onComplete={handleComplete}
+              onSkip={handleSkip}
               onStartTimer={handleStartTimer}
               onStopTimer={handleStopTimer}
               locale={locale}
@@ -464,6 +555,7 @@ export function TaskPanel({ api, locale }: TaskPanelProps) {
               tasks={filteredTasks}
               onSelect={(task) => setEditorTask(task)}
               onComplete={handleComplete}
+              onSkip={handleSkip}
               locale={locale}
             />
           )}

@@ -111,6 +111,27 @@ export class TaskService {
     return this.update(task);
   }
 
+  /** Skip a recurring task instance — add to skipped_instances and advance to next occurrence */
+  async skip(taskId: string): Promise<Task | null> {
+    const cached = this.cache.get(taskId);
+    if (!cached) return null;
+
+    let task = { ...cached.task };
+    if (!task.recurrence) return null;
+
+    const today = new Date().toISOString().slice(0, 10);
+    task.skipped_instances = [...task.skipped_instances, today];
+    const baseDate = task.recurrence.recurrenceAnchor === "completion" ? today : (task.due || today);
+    const nextDue = getNextOccurrence(task.recurrence, baseDate);
+    if (nextDue) {
+      task.due = nextDue;
+    } else {
+      task.due = null;
+    }
+
+    return this.update(task);
+  }
+
   /** Get a task by ID */
   get(taskId: string): Task | null {
     return this.cache.get(taskId)?.task ?? null;

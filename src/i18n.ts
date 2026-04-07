@@ -26,6 +26,14 @@ export interface Translations {
   blockedBy: string;
   blocking: string;
   dueTime: string;
+  recurrenceAnchorScheduled: string;
+  recurrenceAnchorCompletion: string;
+  archiveTask: string;
+  unarchiveTask: string;
+  showArchived: string;
+  skipInstance: string;
+  recurrenceAnchor: string;
+  commaSeparatedIds: string;
   // Statuses
   statusTodo: string;
   statusInProgress: string;
@@ -58,10 +66,6 @@ export interface Translations {
   // Time tracking
   startTimer: string;
   stopTimer: string;
-  pomodoro: string;
-  pomodoroStart: string;
-  pomodoroBreak: string;
-  pomodoroComplete: string;
   timeTracked: string;
   // Recurrence
   recurrenceDaily: string;
@@ -74,6 +78,8 @@ export interface Translations {
   filterByPriority: string;
   filterByContext: string;
   filterByProject: string;
+  filterByTag: string;
+  filterAll: string;
   search: string;
   searchPlaceholder: string;
   showCompleted: string;
@@ -98,8 +104,6 @@ export interface Translations {
   defaultPriority: string;
   defaultView: string;
   dateFormat: string;
-  pomodoroDuration: string;
-  pomodoroBreakDuration: string;
   calendarLayout: string;
   resetDefaults: string;
   // Google Calendar
@@ -168,6 +172,14 @@ const en: Translations = {
   blockedBy: "Blocked By",
   blocking: "Blocking",
   dueTime: "Time",
+  recurrenceAnchorScheduled: "From scheduled/due date",
+  recurrenceAnchorCompletion: "From completion date",
+  archiveTask: "Archive",
+  unarchiveTask: "Unarchive",
+  showArchived: "Show archived",
+  skipInstance: "Skip",
+  recurrenceAnchor: "Recurrence Anchor",
+  commaSeparatedIds: "comma-separated IDs",
   // Statuses
   statusTodo: "To Do",
   statusInProgress: "In Progress",
@@ -200,10 +212,6 @@ const en: Translations = {
   // Time tracking
   startTimer: "Start Timer",
   stopTimer: "Stop Timer",
-  pomodoro: "Pomodoro",
-  pomodoroStart: "Start Pomodoro",
-  pomodoroBreak: "Break Time!",
-  pomodoroComplete: "Pomodoro Complete!",
   timeTracked: "Time Tracked",
   // Recurrence
   recurrenceDaily: "Daily",
@@ -212,10 +220,12 @@ const en: Translations = {
   recurrenceYearly: "Yearly",
   recurrenceCustom: "Custom",
   // Filters
-  filterByStatus: "Filter by status",
-  filterByPriority: "Filter by priority",
-  filterByContext: "Filter by context",
-  filterByProject: "Filter by project",
+  filterByStatus: "Status",
+  filterByPriority: "Priority",
+  filterByContext: "Context",
+  filterByProject: "Project",
+  filterByTag: "Tag",
+  filterAll: "All",
   search: "Search",
   searchPlaceholder: "Search tasks...",
   showCompleted: "Show completed",
@@ -240,8 +250,6 @@ const en: Translations = {
   defaultPriority: "Default Priority",
   defaultView: "Default View",
   dateFormat: "Date Format",
-  pomodoroDuration: "Pomodoro Duration (min)",
-  pomodoroBreakDuration: "Pomodoro Break (min)",
   calendarLayout: "Default Calendar Layout",
   resetDefaults: "Reset to Defaults",
   // Google Calendar
@@ -310,6 +318,14 @@ const ja: Translations = {
   blockedBy: "ブロック元",
   blocking: "ブロック先",
   dueTime: "時刻",
+  recurrenceAnchorScheduled: "予定日/期日基準",
+  recurrenceAnchorCompletion: "完了日基準",
+  archiveTask: "アーカイブ",
+  unarchiveTask: "アーカイブ解除",
+  showArchived: "アーカイブ済みを表示",
+  skipInstance: "スキップ",
+  recurrenceAnchor: "繰り返し基準",
+  commaSeparatedIds: "カンマ区切りのID",
   // Statuses
   statusTodo: "未着手",
   statusInProgress: "進行中",
@@ -342,10 +358,6 @@ const ja: Translations = {
   // Time tracking
   startTimer: "タイマー開始",
   stopTimer: "タイマー停止",
-  pomodoro: "ポモドーロ",
-  pomodoroStart: "ポモドーロ開始",
-  pomodoroBreak: "休憩時間！",
-  pomodoroComplete: "ポモドーロ完了！",
   timeTracked: "作業時間",
   // Recurrence
   recurrenceDaily: "毎日",
@@ -354,10 +366,12 @@ const ja: Translations = {
   recurrenceYearly: "毎年",
   recurrenceCustom: "カスタム",
   // Filters
-  filterByStatus: "ステータスで絞り込み",
-  filterByPriority: "優先度で絞り込み",
-  filterByContext: "コンテキストで絞り込み",
-  filterByProject: "プロジェクトで絞り込み",
+  filterByStatus: "ステータス",
+  filterByPriority: "優先度",
+  filterByContext: "コンテキスト",
+  filterByProject: "プロジェクト",
+  filterByTag: "タグ",
+  filterAll: "すべて",
   search: "検索",
   searchPlaceholder: "タスクを検索...",
   showCompleted: "完了を表示",
@@ -382,8 +396,6 @@ const ja: Translations = {
   defaultPriority: "デフォルト優先度",
   defaultView: "デフォルトビュー",
   dateFormat: "日付形式",
-  pomodoroDuration: "ポモドーロ時間（分）",
-  pomodoroBreakDuration: "ポモドーロ休憩（分）",
   calendarLayout: "デフォルトカレンダー表示",
   resetDefaults: "デフォルトに戻す",
   // Google Calendar

@@ -12,6 +12,7 @@ interface AgendaViewProps {
   tasks: Task[];
   onSelect: (task: Task) => void;
   onComplete: (taskId: string) => void;
+  onSkip: (taskId: string) => void;
   locale?: string;
 }
 
@@ -21,7 +22,7 @@ interface AgendaGroup {
   className: string;
 }
 
-export function AgendaView({ tasks, onSelect, onComplete, locale }: AgendaViewProps) {
+export function AgendaView({ tasks, onSelect, onComplete, onSkip, locale }: AgendaViewProps) {
   const i = t(locale);
   const { activeTaskId } = useStore();
 
@@ -94,6 +95,18 @@ export function AgendaView({ tasks, onSelect, onComplete, locale }: AgendaViewPr
                     onComplete(task.id);
                   }}
                 />
+                {task.recurrence && (
+                  <button
+                    className="tn-skip-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSkip(task.id);
+                    }}
+                    title={i.skipInstance}
+                  >
+                    &#x23ED;
+                  </button>
+                )}
                 <div className="tn-task-content">
                   <div className="tn-task-title">{task.title}</div>
                   <div className="tn-task-meta">

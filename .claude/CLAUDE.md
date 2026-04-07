@@ -49,40 +49,13 @@ npm test         # vitest
 - 初回呼び出しでモデルを自動検出しキャッシュ（`aiModelRef`）
 - システムプロンプトで構造化JSONを返させ、TaskEditorに入力済みで表示
 
-## 未実装項目
+## 実装済み機能（以前は未実装だった項目）
 
-下記は型・シリアライザ・ストアには実装済みだがUI/ロジックが不足している:
+以下は全て実装済み:
 
-### 1. recurrenceAnchor切替UI
-- **現状**: TaskEditorで���り返し設定時、`recurrenceAnchor`は常に`"scheduled"`固定
-- **必要な作業**: TaskEditorの繰り返しセクションにドロップダウンまたはトグルを追加。"scheduled"（期日/予定日基準）と"completion"（完了日基準）を選択可能にする
-- **関連ファイル**: `src/ui/TaskEditor.tsx` (handleRecurrenceChange付近)
-- **i18n**: キーは削除済み（旧recurrenceFlexible/recurrenceFixed）。新しいキー（例: `recurrenceAnchorScheduled`, `recurrenceAnchorCompletion`）をi18n.tsに追加する必要あり
-
-### 2. blockedBy / blocking 編集UI
-- **現状**: `blockedBy: string[]` と `blocking: string[]` は型・��リアライザで対応済みだがTaskEditorにUI無し
-- **必要な作業**: TaskEditorにタスクID入力欄を追加。理想的にはタスク一覧からの検索・選択UIだが、まずはコンマ区切りテキスト入力で良い
-- **関連ファイル**: `src/ui/TaskEditor.tsx`
-- **i18n**: `blockedBy`, `blocking` キーは既に存在
-
-### 3. archived 操作UI
-- **現状**: `archived: boolean`フィールドは型・シリアライザ・フィルタ(`hideArchived`)で対応済み。だがアーカイブする操作UIが無い
-- **必要な作業**:
-  - TaskEditorまたはタスク行のコンテキストメニューに「アーカイブ」ボタン追加
-  - フィルタUIに「アーカイブ済みを表示」トグル追加（`hideArchived`）
-  - （任意）callumalpass/tasknotes同様の自動アーカイブ（完了後N分で自動的にarchived=trueにする設定）
-- **関連ファイル**: `src/ui/TaskPanel.tsx`, `src/ui/TaskEditor.tsx`, `src/ui/SettingsPanel.tsx`
-- **i18n**: `archived` キーは既に存在
-
-### 4. skipped_instances UI
-- **現状**: `skipped_instances: string[]`はシリアライズ対応済みだが、繰り返しタスクのインスタンスをスキップする操作UIが無い
-- **必要な作業**: 繰り返しタスクの完了ボタン長押し or 右クリックで「スキップ」オプションを追加。スキップ時は`skipped_instances`に日付を追加し、次の繰り返しに進む
-- **関連ファイル**: `src/core/taskService.ts` (skip操作メソッド追加), `src/ui/TaskListView.tsx` or `TaskPanel.tsx`
-
-### 5. naturalLanguage.ts の新フィールド対応
-- **現状**: `#`はcontextsにマップ。`scheduled`, `tags`, `blockedBy`/`blocking`は未パース
-- **注意**: quick createはAI経由に変更済みなのでnaturalLanguage.tsは直接UIから呼ばれない。テストとライブラリ利用のみ。優先度低
-- **必要な作業**: 新しいトリガー文字の検討（例: tagsは`#`、contextsは`@`にするなど callumalpass準拠）
-
-### 6. README更新
-- callumalpass/tasknotes準拠へのリファクタ内容（フィールド名変更、scheduled追加等）をREADME/README_jaに反映する必要あり
+1. **recurrenceAnchor切替UI** — TaskEditorで繰り返し設定時に「予定日/期日基準」「完了日基準」を選択可能（i18n: `recurrenceAnchorScheduled`, `recurrenceAnchorCompletion`, `recurrenceAnchor`）
+2. **blockedBy / blocking 編集UI** — TaskEditorにコンマ区切りテキスト入力。TaskListViewにブロック元バッジ表示
+3. **archived 操作UI** — TaskEditorにアーカイブ/解除ボタン（即時保存）、ツールバーに「アーカイブ済みを表示」トグル、デフォルト`hideArchived: true`
+4. **skipped_instances UI** — `TaskService.skip()`メソッド、TaskListView/AgendaViewにスキップボタン（⏭）
+5. **naturalLanguage.ts 新フィールド対応** — `@`=contexts, `#`=tags, `~YYYY-MM-DD(THH:MM)`=scheduled（callumalpass準拠）。メールアドレス衝突防止のlookbehind付き
+6. **README更新** — README.md / README_ja.md をcallumalpass/tasknotes準拠のデータモデル・自然言語書式に更新済み

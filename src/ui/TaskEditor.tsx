@@ -52,6 +52,8 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
   const [contextsInput, setContextsInput] = React.useState(form.contexts.join(", "));
   const [tagsInput, setTagsInput] = React.useState(form.tags.join(", "));
   const [projectsInput, setProjectsInput] = React.useState(form.projects.join(", "));
+  const [blockedByInput, setBlockedByInput] = React.useState(form.blockedBy.join(", "));
+  const [blockingInput, setBlockingInput] = React.useState(form.blocking.join(", "));
   const [scheduledDate, setScheduledDate] = React.useState(form.scheduled ? form.scheduled.slice(0, 10) : "");
   const [scheduledTime, setScheduledTime] = React.useState(form.scheduled && form.scheduled.includes("T") ? form.scheduled.slice(11, 16) : "");
   const [recurrencePreset, setRecurrencePreset] = React.useState("none");
@@ -72,12 +74,22 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
+    const blockedBy = blockedByInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const blocking = blockingInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
     onSave({
       ...form,
       contexts,
       tags,
       projects,
+      blockedBy,
+      blocking,
       modifiedDate: new Date().toISOString(),
     });
   };
@@ -115,7 +127,9 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
                 const contexts = contextsInput.split(",").map((s) => s.trim()).filter(Boolean);
                 const tags = tagsInput.split(",").map((s) => s.trim()).filter(Boolean);
                 const projects = projectsInput.split(",").map((s) => s.trim()).filter(Boolean);
-                onOpenNote({ ...form, contexts, tags, projects, modifiedDate: new Date().toISOString() }, fileId!);
+                const blockedBy = blockedByInput.split(",").map((s) => s.trim()).filter(Boolean);
+                const blocking = blockingInput.split(",").map((s) => s.trim()).filter(Boolean);
+                onOpenNote({ ...form, contexts, tags, projects, blockedBy, blocking, modifiedDate: new Date().toISOString() }, fileId!);
               }}
             >
               &#x2197;
@@ -258,6 +272,41 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
           )}
         </label>
 
+        {form.recurrence && (
+          <label className="tn-field">
+            <span>{i.recurrenceAnchor}</span>
+            <select
+              value={form.recurrence.recurrenceAnchor}
+              onChange={(e) =>
+                setField("recurrence", { ...form.recurrence!, recurrenceAnchor: e.target.value as "scheduled" | "completion" })
+              }
+            >
+              <option value="scheduled">{i.recurrenceAnchorScheduled}</option>
+              <option value="completion">{i.recurrenceAnchorCompletion}</option>
+            </select>
+          </label>
+        )}
+
+        <label className="tn-field">
+          <span>{i.blockedBy} ({i.commaSeparatedIds})</span>
+          <input
+            type="text"
+            value={blockedByInput}
+            onChange={(e) => setBlockedByInput(e.target.value)}
+            placeholder="task-abc123, task-def456"
+          />
+        </label>
+
+        <label className="tn-field">
+          <span>{i.blocking} ({i.commaSeparatedIds})</span>
+          <input
+            type="text"
+            value={blockingInput}
+            onChange={(e) => setBlockingInput(e.target.value)}
+            placeholder="task-abc123, task-def456"
+          />
+        </label>
+
         <label className="tn-field">
           <span>{i.notes}</span>
           <textarea
@@ -298,6 +347,22 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
           <button type="button" className="tn-btn" onClick={onCancel}>
             {i.cancel}
           </button>
+          {!isNew && (
+            <button
+              type="button"
+              className="tn-btn"
+              onClick={() => {
+                const contexts = contextsInput.split(",").map((s) => s.trim()).filter(Boolean);
+                const tags = tagsInput.split(",").map((s) => s.trim()).filter(Boolean);
+                const projects = projectsInput.split(",").map((s) => s.trim()).filter(Boolean);
+                const blockedBy = blockedByInput.split(",").map((s) => s.trim()).filter(Boolean);
+                const blocking = blockingInput.split(",").map((s) => s.trim()).filter(Boolean);
+                onSave({ ...form, contexts, tags, projects, blockedBy, blocking, archived: !form.archived, modifiedDate: new Date().toISOString() });
+              }}
+            >
+              {form.archived ? i.unarchiveTask : i.archiveTask}
+            </button>
+          )}
           {!isNew && onDelete && (
             <button
               type="button"

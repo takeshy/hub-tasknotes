@@ -5,7 +5,6 @@
 
 import * as React from "react";
 import { Task, TaskFilter, TaskSort, TaskNotesSettings, ViewType, CalendarEvent, DEFAULT_SETTINGS } from "./types";
-import { PomodoroState } from "./core/timeTracking";
 
 export interface StoreState {
   /** All loaded tasks */
@@ -24,8 +23,6 @@ export interface StoreState {
   loading: boolean;
   /** Error message */
   error: string | null;
-  /** Pomodoro timer state */
-  pomodoro: PomodoroState | null;
   /** Currently running timer task ID */
   timerTaskId: string | null;
   /** Task ID of the file currently open in the main editor */
@@ -42,12 +39,11 @@ let state: StoreState = {
   tasks: [],
   selectedTask: null,
   currentView: "list",
-  filter: { hideCompleted: true },
+  filter: { hideCompleted: true, hideArchived: true },
   sort: { field: "urgencyScore", direction: "desc" },
   settings: DEFAULT_SETTINGS,
   loading: false,
   error: null,
-  pomodoro: null,
   timerTaskId: null,
   activeTaskId: null,
   calendarAvailable: false,

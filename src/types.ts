@@ -132,10 +132,6 @@ export interface TaskNotesSettings {
   dateFormat: string;
   /** Whether to show completed tasks by default */
   showCompleted: boolean;
-  /** Pomodoro duration in minutes */
-  pomodoroDuration: number;
-  /** Pomodoro break duration in minutes */
-  pomodoroBreak: number;
   /** Default calendar layout */
   calendarLayout: CalendarLayout;
   /** Enable Google Calendar sync */
@@ -163,8 +159,6 @@ export const DEFAULT_SETTINGS: TaskNotesSettings = {
   },
   dateFormat: "YYYY-MM-DD",
   showCompleted: false,
-  pomodoroDuration: 25,
-  pomodoroBreak: 5,
   calendarLayout: "month",
   calendarSync: false,
 };

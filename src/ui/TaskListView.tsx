@@ -14,12 +14,13 @@ interface TaskListViewProps {
   tasks: Task[];
   onSelect: (task: Task) => void;
   onComplete: (taskId: string) => void;
+  onSkip: (taskId: string) => void;
   onStartTimer: (taskId: string) => void;
   onStopTimer: (taskId: string) => void;
   locale?: string;
 }
 
-export function TaskListView({ tasks, onSelect, onComplete, onStartTimer, onStopTimer, locale }: TaskListViewProps) {
+export function TaskListView({ tasks, onSelect, onComplete, onSkip, onStartTimer, onStopTimer, locale }: TaskListViewProps) {
   const i = t(locale);
   const { activeTaskId } = useStore();
 
@@ -39,6 +40,7 @@ export function TaskListView({ tasks, onSelect, onComplete, onStartTimer, onStop
             active={task.id === activeTaskId}
             onSelect={onSelect}
             onComplete={onComplete}
+            onSkip={onSkip}
             onStartTimer={onStartTimer}
             onStopTimer={onStopTimer}
             locale={locale}
@@ -55,12 +57,13 @@ interface TaskRowProps {
   active?: boolean;
   onSelect: (task: Task) => void;
   onComplete: (taskId: string) => void;
+  onSkip: (taskId: string) => void;
   onStartTimer: (taskId: string) => void;
   onStopTimer: (taskId: string) => void;
   locale?: string;
 }
 
-function TaskRow({ task, formulas, active, onSelect, onComplete, onStartTimer, onStopTimer, locale }: TaskRowProps) {
+function TaskRow({ task, formulas, active, onSelect, onComplete, onSkip, onStartTimer, onStopTimer, locale }: TaskRowProps) {
   const i = t(locale);
   const isDone = task.status === "done" || task.status === "cancelled";
   const running = hasRunningTimer(task);
@@ -106,11 +109,27 @@ function TaskRow({ task, formulas, active, onSelect, onComplete, onStartTimer, o
           {task.recurrence && (
             <span className="tn-recurrence-badge">{describeRRule(task.recurrence.rrule, locale)}</span>
           )}
+          {task.archived && (
+            <span className="tn-archived-badge">{i.archived}</span>
+          )}
+          {task.blockedBy.length > 0 && (
+            <span className="tn-blocked-badge">{i.blockedBy}: {task.blockedBy.length}</span>
+          )}
           {formulas.totalTrackedTime > 0 && (
             <span className="tn-time-tracked">{formatMinutes(formulas.totalTrackedTime)}</span>
           )}
         </div>
       </div>
+
+      {task.recurrence && !isDone && (
+        <button
+          className="tn-skip-btn"
+          onClick={() => onSkip(task.id)}
+          title={i.skipInstance}
+        >
+          &#x23ED;
+        </button>
+      )}
 
       <button
         className={`tn-timer-btn ${running ? "tn-timer-running" : ""}`}

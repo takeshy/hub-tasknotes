@@ -100,28 +100,6 @@ export function SettingsPanel({ api, locale }: SettingsPanelProps) {
       </label>
 
       <label className="tn-field">
-        <span>{i.pomodoroDuration}</span>
-        <input
-          type="number"
-          min="1"
-          max="120"
-          value={settings.pomodoroDuration}
-          onChange={(e) => update("pomodoroDuration", parseInt(e.target.value) || 25)}
-        />
-      </label>
-
-      <label className="tn-field">
-        <span>{i.pomodoroBreakDuration}</span>
-        <input
-          type="number"
-          min="1"
-          max="60"
-          value={settings.pomodoroBreak}
-          onChange={(e) => update("pomodoroBreak", parseInt(e.target.value) || 5)}
-        />
-      </label>
-
-      <label className="tn-field">
         <span>{i.showCompleted}</span>
         <input
           type="checkbox"
