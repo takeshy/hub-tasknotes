@@ -5,7 +5,7 @@
 import * as React from "react";
 import { Task, ViewType, TaskStatus, TaskPriority, CalendarLayout, STATUS_ORDER } from "../types";
 import { t, setLanguage } from "../i18n";
-import { useStore, setState, getState } from "../store";
+import { useStore, setState, getState, initSettings } from "../store";
 import { TaskListView } from "./TaskListView";
 import { KanbanView } from "./KanbanView";
 import { CalendarView } from "./CalendarView";
@@ -87,13 +87,17 @@ export function TaskPanel({ api, language }: TaskPanelProps) {
         setState({ activeTaskId: null });
       }
     });
-  }, [store.tasks]);
+  }, []);
 
   // Initialize service and load tasks; check calendar availability
   React.useEffect(() => {
     (async () => {
+      // Load persisted settings into the global store before creating the service
+      await initSettings(api.storage);
+      const settings = getState().settings;
+
       const { TaskService } = await import("../core/taskService");
-      const service = new TaskService(api.drive, api.storage, store.settings.taskFolder);
+      const service = new TaskService(api.drive, api.storage, settings.taskFolder);
       serviceRef.current = service;
       setState({ loading: true });
       try {
@@ -319,14 +323,21 @@ export function TaskPanel({ api, language }: TaskPanelProps) {
     const tasksWithDue = getState().tasks.filter(
       (t) => (t.due || t.scheduled) && t.status !== "cancelled"
     );
+    // Collect all updates first, then apply them in a single setState to avoid race conditions
+    const updatedTasks = new Map<string, Task>();
     for (const task of tasksWithDue) {
       try {
-        const synced = await syncTaskToCalendar(api.calendar, task);
+        const synced = await syncTaskToCalendar(api.calendar!, task);
         const updated = await serviceRef.current.update(synced);
-        setState({ tasks: getState().tasks.map((t) => (t.id === updated.id ? updated : t)) });
+        updatedTasks.set(updated.id, updated);
       } catch {
         // continue syncing remaining tasks
       }
+    }
+    if (updatedTasks.size > 0) {
+      setState({
+        tasks: getState().tasks.map((t) => updatedTasks.get(t.id) ?? t),
+      });
     }
   };
 

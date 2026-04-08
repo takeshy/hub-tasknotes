@@ -88,7 +88,10 @@ function taskToEventBody(task: Task): {
   }
 
   // All-day event: use scheduled date if available, otherwise due date
-  const dateStr = task.scheduled || task.due || new Date().toISOString().slice(0, 10);
+  const dateStr = task.scheduled || task.due;
+  if (!dateStr) {
+    throw new Error("Cannot create calendar event for a task without scheduled or due date");
+  }
 
   return {
     summary,

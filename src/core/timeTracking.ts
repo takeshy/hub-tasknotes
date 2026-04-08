@@ -48,7 +48,7 @@ export function hasRunningTimer(task: Task): boolean {
 export function getRunningElapsed(task: Task): number {
   const running = task.timeEntries.find((entry) => entry.end === null);
   if (!running) return 0;
-  return Math.floor((Date.now() - new Date(running.start).getTime()) / 1000);
+  return Math.max(0, Math.floor((Date.now() - new Date(running.start).getTime()) / 1000));
 }
 
 /** Format seconds as "Xh Ym" or "Ym Zs" */
