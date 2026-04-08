@@ -32,6 +32,22 @@ function toLocalDatetime(iso: string): string {
   return `${y}-${m}-${day}T${h}:${min}`;
 }
 
+function getRecurrencePreset(task: Task | null): string {
+  const rrule = task?.recurrence?.rrule;
+  switch (rrule) {
+    case "FREQ=DAILY;INTERVAL=1":
+      return "daily";
+    case "FREQ=WEEKLY;INTERVAL=1":
+      return "weekly";
+    case "FREQ=MONTHLY;INTERVAL=1":
+      return "monthly";
+    case "FREQ=YEARLY;INTERVAL=1":
+      return "yearly";
+    default:
+      return "none";
+  }
+}
+
 export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNote, language, calendarAvailable, onSyncCalendar, onUnsyncCalendar }: TaskEditorProps) {
   React.useEffect(() => { if (language) setLanguage(language); }, [language]);
   const isNew = !task || !task.id;
@@ -68,7 +84,7 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
   const [blockingInput, setBlockingInput] = React.useState(form.blocking.join(", "));
   const [scheduledDate, setScheduledDate] = React.useState(form.scheduled ? form.scheduled.slice(0, 10) : "");
   const [scheduledTime, setScheduledTime] = React.useState(form.scheduled && form.scheduled.includes("T") ? form.scheduled.slice(11, 16) : "");
-  const [recurrencePreset, setRecurrencePreset] = React.useState("none");
+  const [recurrencePreset, setRecurrencePreset] = React.useState(getRecurrencePreset(task));
 
   // Sync form state when the task prop changes (e.g. after external reload)
   React.useEffect(() => {
@@ -81,6 +97,7 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
       setBlockingInput(task.blocking.join(", "));
       setScheduledDate(task.scheduled ? task.scheduled.slice(0, 10) : "");
       setScheduledTime(task.scheduled && task.scheduled.includes("T") ? task.scheduled.slice(11, 16) : "");
+      setRecurrencePreset(getRecurrencePreset(task));
     }
   }, [task?.id, task?.modifiedDate]);
 
