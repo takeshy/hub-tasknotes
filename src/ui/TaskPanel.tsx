@@ -92,8 +92,12 @@ export function TaskPanel({ api, language }: TaskPanelProps) {
   // Initialize service and load tasks; check calendar availability
   React.useEffect(() => {
     (async () => {
-      // Load persisted settings into the global store before creating the service
-      await initSettings(api.storage);
+      // Settings bootstrap should not block task loading if storage is temporarily unavailable.
+      try {
+        await initSettings(api.storage);
+      } catch {
+        // Fall back to in-memory defaults already present in the store.
+      }
       const settings = getState().settings;
 
       const { TaskService } = await import("../core/taskService");
