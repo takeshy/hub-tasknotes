@@ -9,6 +9,7 @@
  */
 
 import { RecurrenceRule } from "../types";
+import { formatDateStr } from "./dateUtils";
 
 interface RRuleParts {
   freq: "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
@@ -34,15 +35,19 @@ export function parseRRule(rrule: string): RRuleParts {
       case "FREQ":
         parts.freq = value as RRuleParts["freq"];
         break;
-      case "INTERVAL":
-        parts.interval = parseInt(value) || 1;
+      case "INTERVAL": {
+        const iv = parseInt(value);
+        parts.interval = Number.isNaN(iv) ? 1 : Math.max(1, iv);
         break;
+      }
       case "BYDAY":
         parts.byDay = value.split(",");
         break;
-      case "COUNT":
-        parts.count = parseInt(value) || null;
+      case "COUNT": {
+        const cv = parseInt(value);
+        parts.count = Number.isNaN(cv) ? null : cv;
         break;
+      }
       case "UNTIL":
         parts.until = `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
         break;
@@ -108,7 +113,7 @@ export function getNextOccurrence(rule: RecurrenceRule, baseDate: string): strin
       break;
   }
 
-  return formatDate(next);
+  return formatDateStr(next);
 }
 
 /** Get a human-readable description of a recurrence rule */
@@ -133,9 +138,3 @@ export function describeRRule(rrule: string): string {
   return t(`recurrence.every.${parts.freq.toLowerCase()}`).replace("{0}", String(interval));
 }
 
-function formatDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}

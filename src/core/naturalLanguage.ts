@@ -9,6 +9,7 @@
 
 import { Task } from "../types";
 import { createDefaultTask } from "./taskSerializer";
+import { formatDateStr } from "./dateUtils";
 
 interface ParsedInput {
   title: string;
@@ -129,10 +130,10 @@ function extractRelativeDate(text: string): string | null {
   const today = new Date();
   const lower = text.toLowerCase();
 
-  if (/\btoday\b|今日/.test(lower)) return formatDate(today);
-  if (/\btomorrow\b|明日/.test(lower)) return formatDate(addDays(today, 1));
-  if (/\byesterday\b|昨日/.test(lower)) return formatDate(addDays(today, -1));
-  if (/\b明後日\b/.test(lower)) return formatDate(addDays(today, 2));
+  if (/\btoday\b|今日/.test(lower)) return formatDateStr(today);
+  if (/\btomorrow\b|明日/.test(lower)) return formatDateStr(addDays(today, 1));
+  if (/\byesterday\b|昨日/.test(lower)) return formatDateStr(addDays(today, -1));
+  if (/\b明後日\b/.test(lower)) return formatDateStr(addDays(today, 2));
 
   // "next Monday", "next Tuesday", etc.
   const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -142,7 +143,7 @@ function extractRelativeDate(text: string): string | null {
     const currentDay = today.getDay();
     let daysAhead = targetDay - currentDay;
     if (daysAhead <= 0) daysAhead += 7;
-    return formatDate(addDays(today, daysAhead));
+    return formatDateStr(addDays(today, daysAhead));
   }
 
   // Japanese day of week: 来週月曜, 来週火曜, etc.
@@ -154,17 +155,17 @@ function extractRelativeDate(text: string): string | null {
       const currentDay = today.getDay();
       let daysAhead = targetDay - currentDay + 7;
       if (daysAhead <= 0) daysAhead += 7;
-      return formatDate(addDays(today, daysAhead));
+      return formatDateStr(addDays(today, daysAhead));
     }
   }
 
   // "in N days"
   const inDaysMatch = lower.match(/\bin\s+(\d+)\s+days?\b/);
-  if (inDaysMatch) return formatDate(addDays(today, parseInt(inDaysMatch[1])));
+  if (inDaysMatch) return formatDateStr(addDays(today, parseInt(inDaysMatch[1])));
 
   // "N日後"
   const jaDaysMatch = text.match(/(\d+)日後/);
-  if (jaDaysMatch) return formatDate(addDays(today, parseInt(jaDaysMatch[1])));
+  if (jaDaysMatch) return formatDateStr(addDays(today, parseInt(jaDaysMatch[1])));
 
   return null;
 }
@@ -183,13 +184,6 @@ function addDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
-}
-
-function formatDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
 }
 
 function generateTaskId(title: string): string {

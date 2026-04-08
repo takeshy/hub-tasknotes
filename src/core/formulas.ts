@@ -16,12 +16,13 @@ export function computeFormulas(task: Task): TaskFormulas {
   return { daysUntilDue, isOverdue, urgencyScore, totalTrackedTime, efficiencyRatio };
 }
 
-/** Days until due date (negative = overdue, null = no due date) */
+/** Days until due date (negative = overdue, null = no due date or invalid) */
 function calcDaysUntilDue(task: Task): number | null {
   if (!task.due) return null;
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const due = new Date(task.due + "T00:00:00");
+  if (Number.isNaN(due.getTime())) return null;
   const diff = due.getTime() - now.getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }

@@ -67,6 +67,14 @@ export function subscribe(fn: Listener): () => void {
   };
 }
 
+/** Load settings from persistent storage and merge into store */
+export async function initSettings(storage: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }): Promise<void> {
+  const stored = await storage.get("settings") as import("./types").TaskNotesSettings | null;
+  if (stored) {
+    setState({ settings: { ...state.settings, ...stored } });
+  }
+}
+
 /** React hook — subscribes to store changes. */
 export function useStore(): StoreState {
   const [snap, setSnap] = React.useState(getState);

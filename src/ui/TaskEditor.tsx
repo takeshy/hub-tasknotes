@@ -70,6 +70,20 @@ export function TaskEditor({ task, fileId, onSave, onCancel, onDelete, onOpenNot
   const [scheduledTime, setScheduledTime] = React.useState(form.scheduled && form.scheduled.includes("T") ? form.scheduled.slice(11, 16) : "");
   const [recurrencePreset, setRecurrencePreset] = React.useState("none");
 
+  // Sync form state when the task prop changes (e.g. after external reload)
+  React.useEffect(() => {
+    if (task) {
+      setForm(task);
+      setContextsInput(task.contexts.join(", "));
+      setTagsInput(task.tags.join(", "));
+      setProjectsInput(task.projects.join(", "));
+      setBlockedByInput(task.blockedBy.join(", "));
+      setBlockingInput(task.blocking.join(", "));
+      setScheduledDate(task.scheduled ? task.scheduled.slice(0, 10) : "");
+      setScheduledTime(task.scheduled && task.scheduled.includes("T") ? task.scheduled.slice(11, 16) : "");
+    }
+  }, [task?.id, task?.modifiedDate]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return;
