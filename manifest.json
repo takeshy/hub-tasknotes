@@ -1,9 +1,14 @@
 {
   "id": "tasknotes",
   "name": "TaskNotes - Task Management",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "minAppVersion": "1.0.0",
   "description": "Task management plugin where each task is a separate Markdown note with YAML frontmatter. Features: List, Kanban, Calendar, Agenda views, AI task creation, time tracking, recurring tasks, dependencies, archive, and more.",
   "author": "takeshy",
-  "permissions": ["storage", "drive", "gemini", "calendar"]
+  "permissions": [
+    "storage",
+    "drive",
+    "gemini",
+    "calendar"
+  ]
 }
