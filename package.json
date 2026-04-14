@@ -1,6 +1,6 @@
 {
   "name": "hub-tasknotes",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Task management plugin for GemiHub - list, kanban, calendar & agenda views with AI task creation and time tracking",
   "main": "main.js",
   "scripts": {
