@@ -385,6 +385,10 @@ export function setLanguage(lang: string): void {
   currentLang = lang.startsWith("ja") ? "ja" : "en";
 }
 
+export function getLanguage(): string {
+  return currentLang;
+}
+
 export function t(key: string): string {
   return translations[currentLang]?.[key] ?? translations["en"]?.[key] ?? key;
 }

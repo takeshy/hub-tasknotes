@@ -4,7 +4,7 @@
 
 import * as React from "react";
 import { Task, ViewType, TaskStatus, TaskPriority, CalendarLayout, STATUS_ORDER } from "../types";
-import { t, setLanguage } from "../i18n";
+import { t, setLanguage, getLanguage } from "../i18n";
 import { useStore, setState, getState, initSettings } from "../store";
 import { TaskListView } from "./TaskListView";
 import { KanbanView } from "./KanbanView";
@@ -32,7 +32,13 @@ Fields:
 - body (string, additional notes extracted from the input, default "")
 
 Today's date is {{TODAY}}.
+Write the title and body in {{LANGUAGE}}, matching the user's UI language even if the input uses different words.
 Return ONLY valid JSON. No markdown fences, no explanation.`;
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  ja: "Japanese (日本語)",
+  en: "English",
+};
 
 interface GeminiAPI {
   chat(
@@ -137,7 +143,8 @@ export function TaskPanel({ api, language }: TaskPanelProps) {
 
   const callAI = async (input: string): Promise<string> => {
     const today = new Date().toISOString().slice(0, 10);
-    const systemPrompt = AI_SYSTEM_PROMPT.replace("{{TODAY}}", today);
+    const langName = LANGUAGE_NAMES[getLanguage()] ?? LANGUAGE_NAMES.en;
+    const systemPrompt = AI_SYSTEM_PROMPT.replace("{{TODAY}}", today).replace("{{LANGUAGE}}", langName);
     const messages = [{ role: "user", content: input }];
 
     // Try cached model first
