@@ -1,5 +1,7 @@
 # TaskNotes - タスク管理プラグイン for GemiHub
 
+![TaskNotes](docs/task_notes.png)
+
 各タスクがYAMLフロントマター付きのMarkdownファイルとして保存される [GemiHub](https://github.com/takeshy/gemihub) プラグインです。データはポータブル — タスクはただのMarkdownファイルなので、あらゆるツールで読み取り、変換、移行が可能です。
 
 [English](README.md)

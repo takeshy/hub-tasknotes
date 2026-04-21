@@ -1,5 +1,7 @@
 # TaskNotes - Task Management Plugin for GemiHub
 
+![TaskNotes](docs/task_notes.png)
+
 A [GemiHub](https://github.com/takeshy/gemihub) plugin for task management where each task is a separate Markdown note with YAML frontmatter. Your data is portable — tasks are just Markdown files that you can read, transform, or migrate with any tool.
 
 [Japanese / 日本語](README_ja.md)
